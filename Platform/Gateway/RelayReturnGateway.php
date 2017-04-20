@@ -1,10 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Ekyna\Bundle\DpdBundle\Platform\Gateway;
 
+use DateTime;
 use Ekyna\Component\Commerce\Exception\InvalidArgumentException;
 use Ekyna\Component\Commerce\Exception\ShipmentGatewayException;
-use Ekyna\Component\Commerce\Order\Entity\OrderShipmentLabel;
 use Ekyna\Component\Commerce\Shipment\Model as Shipment;
 use Ekyna\Component\Commerce\Shipment\Gateway;
 use Ekyna\Component\Dpd;
@@ -17,18 +19,12 @@ use Symfony\Component\Form\FormInterface;
  */
 class RelayReturnGateway extends AbstractRelayGateway
 {
-    /**
-     * @inheritdoc
-     */
-    public function buildForm(FormInterface $form)
+    public function buildForm(FormInterface $form): void
     {
 
     }
 
-    /**
-     * @inheritdoc
-     */
-    protected function doSingleShipment(Shipment\ShipmentInterface $shipment)
+    protected function doSingleShipment(Shipment\ShipmentInterface $shipment): bool
     {
         $request = $this->createInverseShipmentRequest($shipment);
 
@@ -41,7 +37,7 @@ class RelayReturnGateway extends AbstractRelayGateway
         $result = $response->CreateReverseInverseShipmentWithLabelsResult;
 
         // Tracking number
-        $shipment->setTrackingNumber($result->shipment->parcelnumber);
+        $shipment->setTrackingNumber((string)$result->shipment->parcelnumber);
 
         // Shipment labels
         foreach ($result->labels as $l) {
@@ -49,8 +45,8 @@ class RelayReturnGateway extends AbstractRelayGateway
                 $this->createLabel(
                     $l->label,
                     $this->convertLabelType($l->type),
-                    OrderShipmentLabel::FORMAT_PNG,
-                    OrderShipmentLabel::SIZE_A5
+                    Shipment\ShipmentLabelInterface::FORMAT_PNG,
+                    Shipment\ShipmentLabelInterface::SIZE_A5
                 )
             );
         }
@@ -60,21 +56,18 @@ class RelayReturnGateway extends AbstractRelayGateway
 
     /**
      * Creates the reverse inverse shipment with labels request.
-     *
-     * @param Shipment\ShipmentInterface $shipment
-     *
-     * @return Dpd\EPrint\Request\ReverseShipmentLabelRequest
      */
-    protected function createInverseShipmentRequest(Shipment\ShipmentInterface $shipment)
-    {
+    protected function createInverseShipmentRequest(
+        Shipment\ShipmentInterface $shipment
+    ): Dpd\EPrint\Request\ReverseShipmentLabelRequest {
         if ($shipment->hasParcels()) {
-            throw new InvalidArgumentException("Expected shipment without parcel.");
+            throw new InvalidArgumentException('Expected shipment without parcel.');
         }
         if (!$shipment->isReturn()) {
-            throw new InvalidArgumentException("Expected return shipment.");
+            throw new InvalidArgumentException('Expected return shipment.');
         }
         if (!$shipment->getRelayPoint()) {
-            throw new InvalidArgumentException("Expected return shipment with relay point.");
+            throw new InvalidArgumentException('Expected return shipment with relay point.');
         }
 
         $request = new Dpd\EPrint\Request\ReverseShipmentLabelRequest();
@@ -104,12 +97,12 @@ class RelayReturnGateway extends AbstractRelayGateway
         if (0 >= $weight = $shipment->getWeight()) {
             $weight = $this->weightCalculator->calculateShipment($shipment);
         }
-        $request->weight = round($weight, 2); // kg
+        $request->weight = $weight->toFixed(2); // kg
         $request->expire_offset = 15; // days (from shippingdate, min 7)
         $request->refasbarcode = true;
 
         // (Optional) Theoretical shipment date ('d/m/Y' or 'd.m.Y')
-        $request->shippingdate = (new \DateTime('now'))->format('d/m/Y');
+        $request->shippingdate = (new DateTime('now'))->format('d/m/Y');
 
         // (Optional) Reference
         $request->referencenumber = $shipment->getNumber();
@@ -117,10 +110,7 @@ class RelayReturnGateway extends AbstractRelayGateway
         return $request;
     }
 
-    /**
-     * @inheritDoc
-     */
-    protected function getDefaultLabelTypes()
+    protected function getDefaultLabelTypes(): array
     {
         return [
             Shipment\ShipmentLabelInterface::TYPE_RETURN,
@@ -128,10 +118,7 @@ class RelayReturnGateway extends AbstractRelayGateway
         ];
     }
 
-    /**
-     * @inheritDoc
-     */
-    public function getActions()
+    public function getActions(): array
     {
         return [
             Gateway\GatewayActions::SHIP,
@@ -144,10 +131,7 @@ class RelayReturnGateway extends AbstractRelayGateway
         ];
     }
 
-    /**
-     * @inheritDoc
-     */
-    public function getCapabilities()
+    public function getCapabilities(): int
     {
         return static::CAPABILITY_RETURN | static::CAPABILITY_RELAY;
     }

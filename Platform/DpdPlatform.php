@@ -1,10 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Ekyna\Bundle\DpdBundle\Platform;
 
-use Ekyna\Bundle\SettingBundle\Manager\SettingsManagerInterface;
+use Ekyna\Bundle\SettingBundle\Manager\SettingManagerInterface;
 use Ekyna\Component\Commerce\Exception\InvalidArgumentException;
 use Ekyna\Component\Commerce\Shipment\Gateway\AbstractPlatform;
+use Ekyna\Component\Commerce\Shipment\Gateway\GatewayInterface;
 use Ekyna\Component\Commerce\Shipment\Gateway\PlatformActions;
 use Symfony\Component\Config\Definition;
 
@@ -15,53 +18,31 @@ use Symfony\Component\Config\Definition;
  */
 class DpdPlatform extends AbstractPlatform
 {
-    const NAME = 'DPD';
+    public const NAME = 'DPD';
 
-    /**
-     * @var SettingsManagerInterface
-     */
-    protected $settingManager;
-
-    /**
-     * @var array
-     */
-    protected $config;
+    protected SettingManagerInterface $settingManager;
+    protected array $config;
 
 
-    /**
-     * Constructor.
-     *
-     * @param SettingsManagerInterface $settingManager
-     * @param array                    $config
-     */
-    public function __construct(SettingsManagerInterface $settingManager, array $config = [])
+    public function __construct(SettingManagerInterface $settingManager, array $config = [])
     {
         $this->settingManager = $settingManager;
         $this->config = $config;
     }
 
-    /**
-     * @inheritDoc
-     */
-    public function getName()
+    public function getName(): string
     {
         return static::NAME;
     }
 
-    /**
-     * @inheritDoc
-     */
-    public function getActions()
+    public function getActions(): array
     {
         return [
             PlatformActions::PRINT_LABELS,
         ];
     }
 
-    /**
-     * @inheritDoc
-     */
-    public function createGateway($name, array $config = [])
+    public function createGateway(string $name, array $config = []): GatewayInterface
     {
         $class = sprintf('Ekyna\Bundle\DpdBundle\Platform\Gateway\%sGateway', $config['service']);
         if (!class_exists($class)) {
@@ -76,10 +57,7 @@ class DpdPlatform extends AbstractPlatform
         return $gateway;
     }
 
-    /**
-     * @inheritDoc
-     */
-    protected function createConfigDefinition(Definition\Builder\NodeDefinition $rootNode)
+    protected function createConfigDefinition(Definition\Builder\NodeDefinition $rootNode): void
     {
         $rootNode
             ->children()

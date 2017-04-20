@@ -1,7 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Ekyna\Bundle\DpdBundle\Platform\Gateway;
 
+use DateTime;
+use Decimal\Decimal;
 use Ekyna\Bundle\DpdBundle\Platform\DpdPlatform;
 use Ekyna\Component\Commerce\Exception\ShipmentGatewayException;
 use Ekyna\Component\Commerce\Shipment;
@@ -14,16 +18,9 @@ use Ekyna\Component\Dpd;
  */
 abstract class AbstractRelayGateway extends AbstractGateway
 {
-    /**
-     * @var Dpd\Pudo\Api
-     */
-    private $pudoApi;
+    private ?Dpd\Pudo\Api $pudoApi = null;
 
-
-    /**
-     * @inheritDoc
-     */
-    public function getActions()
+    public function getActions(): array
     {
         return [
             Shipment\Gateway\GatewayActions::SHIP,
@@ -35,18 +32,16 @@ abstract class AbstractRelayGateway extends AbstractGateway
         ];
     }
 
-    /**
-     * @inheritDoc
-     */
-    protected function createSingleShipmentRequest(Shipment\Model\ShipmentInterface $shipment)
-    {
+    protected function createSingleShipmentRequest(
+        Shipment\Model\ShipmentInterface $shipment
+    ): Dpd\EPrint\Request\StdShipmentLabelRequest {
         $request = parent::createSingleShipmentRequest($shipment);
 
         // Receiver relay point
         $relay = $this->addressResolver->resolveReceiverAddress($shipment);
         if (!$relay instanceof Shipment\Model\RelayPointInterface) {
             throw new Dpd\Exception\RuntimeException(
-                "Expected instance of " . Shipment\Model\RelayPointInterface::class
+                'Expected instance of ' . Shipment\Model\RelayPointInterface::class
             );
         }
 
@@ -61,26 +56,22 @@ abstract class AbstractRelayGateway extends AbstractGateway
         return $request;
     }
 
-    /**
-     * @inheritDoc
-     */
-    protected function doMultiShipment(Shipment\Model\ShipmentInterface $shipment)
+    protected function doMultiShipment(Shipment\Model\ShipmentInterface $shipment): bool
     {
         $this->throwUnsupportedAction('parcels shipment');
     }
 
-    /**
-     * @inheritDoc
-     */
-    public function listRelayPoints(Shipment\Gateway\Model\Address $address, float $weight)
-    {
+    public function listRelayPoints(
+        Shipment\Gateway\Model\Address $address,
+        Decimal                          $weight
+    ): Shipment\Gateway\Model\ListRelayPointResponse {
         $request = new Dpd\Pudo\Request\GetPudoListRequest();
 
         $hash = $request->address = $address->getStreet();
         $hash .= $request->zipCode = $address->getPostalCode();
         $hash .= $request->city = $address->getCity();
         $hash .= $request->countrycode = 'FR';
-        $hash .= $request->date_from = (new \DateTime('+2 day'))->format('d/m/Y'); // TODO regarding to stock availability
+        $hash .= $request->date_from = (new DateTime('+2 day'))->format('d/m/Y'); // TODO regarding to stock availability
 
         $request->requestID = substr(md5($hash), 0, 30);
 
@@ -99,17 +90,13 @@ abstract class AbstractRelayGateway extends AbstractGateway
         return $return;
     }
 
-    /**
-     * @inheritDoc
-     */
-    public function getRelayPoint(string $number)
+    public function getRelayPoint(string $number): Shipment\Gateway\Model\GetRelayPointResponse
     {
         $request = new Dpd\Pudo\Request\GetPudoDetailsRequest();
 
         $request->pudo_id = $number;
 
         try {
-            /** @var \Ekyna\Component\Dpd\Pudo\Response\GetPudoDetailsResponse $response */
             $response = $this->getPudoApi()->GetPudoDetails($request);
         } catch (Dpd\Exception\ExceptionInterface $e) {
             throw new ShipmentGatewayException($e->getMessage(), $e->getCode(), $e);
@@ -124,12 +111,8 @@ abstract class AbstractRelayGateway extends AbstractGateway
 
     /**
      * Transforms a dpd relay point item to a commerce one.
-     *
-     * @param Dpd\Pudo\Model\Item $item
-     *
-     * @return Shipment\Entity\RelayPoint
      */
-    protected function transformItemToRelayPoint(Dpd\Pudo\Model\Item $item)
+    protected function transformItemToRelayPoint(Dpd\Pudo\Model\Item $item): Shipment\Entity\RelayPoint
     {
         $country = $this->addressResolver->getCountryRepository()->findOneByCode('FR');
 
@@ -152,9 +135,7 @@ abstract class AbstractRelayGateway extends AbstractGateway
             ->setLongitude($item->getLongitude())
             ->setLatitude($item->getLatitude());
 
-        /** @var Shipment\Model\OpeningHour $current */
         $current = null;
-        /** @var Dpd\Pudo\Model\OpeningHour $oh */
         foreach ($item->getOpeningHours() as $oh) {
             if ((null === $current) || ($current->getDay() !== $oh->getDay())) {
                 $current = new Shipment\Model\OpeningHour();
@@ -168,28 +149,20 @@ abstract class AbstractRelayGateway extends AbstractGateway
         return $point;
     }
 
-    /**
-     * @inheritDoc
-     */
-    public function getCapabilities()
+    public function getCapabilities(): int
     {
         return static::CAPABILITY_SHIPMENT | static::CAPABILITY_RELAY;
     }
 
-    /**
-     * @inheritDoc
-     */
-    public function getMaxWeight()
+    public function getMaxWeight(): ?Decimal
     {
-        return 20;
+        return new Decimal(20);
     }
 
     /**
-     * Returns the pudo api.
-     *
-     * @return Dpd\Pudo\Api
+     * Returns the PUDO API.
      */
-    protected function getPudoApi()
+    protected function getPudoApi(): Dpd\Pudo\Api
     {
         if (null !== $this->pudoApi) {
             return $this->pudoApi;

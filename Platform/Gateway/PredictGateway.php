@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Ekyna\Bundle\DpdBundle\Platform\Gateway;
 
 use Ekyna\Component\Commerce\Shipment\Model as Shipment;
@@ -13,26 +15,17 @@ use Ekyna\Component\Commerce\Shipment\Model\ShipmentInterface;
  */
 class PredictGateway extends AbstractGateway
 {
-    /**
-     * @inheritDoc
-     */
-    public function getCapabilities()
+    public function getCapabilities(): int
     {
         return static::CAPABILITY_SHIPMENT;
     }
 
-    /**
-     * @inheritDoc
-     */
-    public function getRequirements()
+    public function getRequirements(): int
     {
         return static::REQUIREMENT_MOBILE;
     }
 
-    /**
-     * @inheritdoc
-     */
-    protected function createSingleShipmentRequest(ShipmentInterface $shipment)
+    protected function createSingleShipmentRequest(ShipmentInterface $shipment): EPrint\Request\StdShipmentLabelRequest
     {
         $request = parent::createSingleShipmentRequest($shipment);
 
@@ -43,13 +36,9 @@ class PredictGateway extends AbstractGateway
     }
 
     /**
-     * Creates the predict contact.
-     *
-     * @param ShipmentInterface $shipment
-     *
-     * @return EPrint\Model\Contact
+     * Creates the Predict contact.
      */
-    protected function createContact(ShipmentInterface $shipment)
+    protected function createContact(ShipmentInterface $shipment): EPrint\Model\Contact
     {
         $receiver = $this->addressResolver->resolveReceiverAddress($shipment, true);
 
@@ -60,10 +49,7 @@ class PredictGateway extends AbstractGateway
         return $contact;
     }
 
-    /**
-     * @inheritdoc
-     */
-    public function supportShipment(Shipment\ShipmentDataInterface $shipment, $throw = true)
+    public function supportShipment(Shipment\ShipmentDataInterface $shipment, bool $throw = true): bool
     {
         if (!parent::supportShipment($shipment, $throw)) {
             return false;
@@ -75,7 +61,7 @@ class PredictGateway extends AbstractGateway
 
         if (!$receiver->getMobile()) {
             if ($throw) {
-                $this->throwUnsupportedShipment($shipment, "Receiver address must have a mobile phone number.");
+                $this->throwUnsupportedShipment($shipment, 'Receiver address must have a mobile phone number.');
             }
 
             return false;

@@ -5,7 +5,7 @@
     "authors": [
         {
             "name": "Etienne Dauvergne",
-            "homepage": "http://ekyna.com"
+            "homepage": "https://ekyna.com"
         }
     ],
     "keywords": [
@@ -17,9 +17,9 @@
     "homepage": "https://github.com/ekyna/DpdBundle",
     "license": "MIT",
     "require": {
-        "php": ">=7.0",
-        "ekyna/commerce-bundle": "0.7.x-dev",
-        "ekyna/dpd": "~1.0"
+        "php": ">=7.4",
+        "ekyna/commerce-bundle": "0.8.x-dev",
+        "ekyna/dpd": "^1.0"
     },
     "autoload": {
         "psr-4": {

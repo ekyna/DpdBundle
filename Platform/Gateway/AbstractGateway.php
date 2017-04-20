@@ -1,13 +1,17 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Ekyna\Bundle\DpdBundle\Platform\Gateway;
 
-use Ekyna\Bundle\SettingBundle\Manager\SettingsManagerInterface;
+use Decimal\Decimal;
+use Ekyna\Bundle\SettingBundle\Manager\SettingManagerInterface;
 use Ekyna\Component\Commerce\Common\Model\AddressInterface;
 use Ekyna\Component\Commerce\Common\Model\SaleAddressInterface;
 use Ekyna\Component\Commerce\Exception\InvalidArgumentException;
 use Ekyna\Component\Commerce\Exception\RuntimeException;
 use Ekyna\Component\Commerce\Exception\ShipmentGatewayException;
+use Ekyna\Component\Commerce\Exception\UnexpectedTypeException;
 use Ekyna\Component\Commerce\Order\Entity\OrderShipmentLabel;
 use Ekyna\Component\Commerce\Shipment\Gateway;
 use Ekyna\Component\Commerce\Shipment\Model as Shipment;
@@ -18,6 +22,8 @@ use libphonenumber\PhoneNumberUtil;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\FormInterface;
 
+use function Symfony\Component\Translation\t;
+
 /**
  * Class AbstractGateway
  * @package Ekyna\Bundle\DpdBundle
@@ -25,39 +31,20 @@ use Symfony\Component\Form\FormInterface;
  */
 abstract class AbstractGateway extends Gateway\AbstractGateway
 {
-    const TRACK_URL = 'http://www.dpd.fr/traces_%s';
-    const PROVE_URL = 'http://www.dpd.fr/preuvelivraison_%s';
+    public const TRACK_URL = 'https://www.dpd.fr/traces_%s';
+    public const PROVE_URL = 'https://www.dpd.fr/preuvelivraison_%s';
 
-    /**
-     * @var SettingsManagerInterface
-     */
-    protected $settingManager;
+    protected SettingManagerInterface $settingManager;
 
-    /**
-     * @var Dpd\EPrint\Api
-     */
-    private $ePrintApi;
+    private ?Dpd\EPrint\Api  $ePrintApi = null;
+    private ?PhoneNumberUtil $phoneUtil = null;
 
-    /**
-     * @var PhoneNumberUtil
-     */
-    private $phoneUtil;
-
-
-    /**
-     * Sets the setting manager.
-     *
-     * @param SettingsManagerInterface $settingManager
-     */
-    public function setSettingManager(SettingsManagerInterface $settingManager)
+    public function setSettingManager(SettingManagerInterface $settingManager)
     {
         $this->settingManager = $settingManager;
     }
 
-    /**
-     * @inheritDoc
-     */
-    public function ship(Shipment\ShipmentInterface $shipment)
+    public function ship(Shipment\ShipmentInterface $shipment): bool
     {
         $this->supportShipment($shipment);
 
@@ -82,10 +69,7 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
         return true;
     }
 
-    /**
-     * @inheritDoc
-     */
-    public function track(Shipment\ShipmentDataInterface $shipment)
+    public function track(Shipment\ShipmentDataInterface $shipment): ?string
     {
         if (!$this->supportAction(Gateway\GatewayActions::TRACK)) {
             return null;
@@ -100,10 +84,7 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
         return null;
     }
 
-    /**
-     * @inheritDoc
-     */
-    public function prove(Shipment\ShipmentDataInterface $shipment)
+    public function prove(Shipment\ShipmentDataInterface $shipment): ?string
     {
         if (!$this->supportAction(Gateway\GatewayActions::PROVE)) {
             return null;
@@ -118,10 +99,7 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
         return null;
     }
 
-    /**
-     * @inheritDoc
-     */
-    public function printLabel(Shipment\ShipmentDataInterface $shipment, array $types = null)
+    public function printLabel(Shipment\ShipmentDataInterface $shipment, array $types = null): array
     {
         $this->supportShipment($shipment);
 
@@ -151,34 +129,27 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
         } elseif ($shipment instanceof Shipment\ShipmentParcelInterface) {
             $this->addShipmentLabel($labels, $shipment, $types);
         } else {
-            throw new InvalidArgumentException(
-                "Expected instance of " . Shipment\ShipmentInterface::class
-                . " or " . Shipment\ShipmentParcelInterface::class
-            );
+            throw new UnexpectedTypeException($shipment, [
+                Shipment\ShipmentInterface::class,
+                Shipment\ShipmentParcelInterface::class,
+            ]);
         }
 
         return $labels;
     }
 
-    /**
-     * @inheritDoc
-     */
-    public function buildForm(FormInterface $form)
+    public function buildForm(FormInterface $form): void
     {
         $form->add('insurance', CheckboxType::class, [
-            'label'              => 'insurance',
-            'translation_domain' => 'Dpd',
-            'attr'               => [
+            'label'    => t('insurance', [], 'Dpd'),
+            'attr'     => [
                 'align_with_widget' => true,
             ],
-            'required'           => false,
+            'required' => false,
         ]);
     }
 
-    /**
-     * @inheritDoc
-     */
-    public function getActions()
+    public function getActions(): array
     {
         return [
             Gateway\GatewayActions::SHIP,
@@ -189,43 +160,31 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
         ];
     }
 
-    /**
-     * @inheritDoc
-     */
-    public function getCapabilities()
+    public function getCapabilities(): int
     {
         return static::CAPABILITY_SHIPMENT | static::CAPABILITY_PARCEL;
     }
 
-    /**
-     * @inheritDoc
-     */
-    public function getMaxWeight()
+    public function getMaxWeight(): ?Decimal
     {
-        return 30;
+        return new Decimal(30);
     }
 
     /**
      * Returns the default label types.
-     *
-     * @return array
      */
-    protected function getDefaultLabelTypes()
+    protected function getDefaultLabelTypes(): array
     {
         return [Shipment\ShipmentLabelInterface::TYPE_SHIPMENT];
     }
 
     /**
      * Creates and adds the shipment label to the given list.
-     *
-     * @param array                          $labels
-     * @param Shipment\ShipmentDataInterface $shipment
-     * @param array                          $types
      */
-    protected function addShipmentLabel(array &$labels, Shipment\ShipmentDataInterface $shipment, array $types)
+    protected function addShipmentLabel(array &$labels, Shipment\ShipmentDataInterface $shipment, array $types): void
     {
         if (!$shipment->hasLabels() && !$this->doGetLabel($shipment)) {
-            throw new RuntimeException("Failed to retrieve shipment label.");
+            throw new RuntimeException('Failed to retrieve shipment label.');
         }
 
         foreach ($shipment->getLabels() as $label) {
@@ -237,15 +196,11 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
 
     /**
      * Performs get shipment details through DPD API.
-     *
-     * @param Shipment\ShipmentDataInterface $shipment
-     *
-     * @return Dpd\EPrint\Model\ShipmentDataExtended|null
      */
-    protected function doGetShipment(Shipment\ShipmentDataInterface $shipment)
+    protected function doGetShipment(Shipment\ShipmentDataInterface $shipment): ?Dpd\EPrint\Model\ShipmentDataExtended
     {
-        $request           = new Dpd\EPrint\Request\ShipmentRequest();
-        $request->parcel   = $this->createParcel($shipment);
+        $request = new Dpd\EPrint\Request\ShipmentRequest();
+        $request->parcel = $this->createParcel($shipment);
         $request->customer = $this->createCustomer();
 
         try {
@@ -260,18 +215,16 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
     /**
      * Performs get label details through DPD API.
      *
-     * @param Shipment\ShipmentDataInterface $shipment
-     *
      * @return bool Whether the label has been set.
      */
-    protected function doGetLabel(Shipment\ShipmentDataInterface $shipment)
+    protected function doGetLabel(Shipment\ShipmentDataInterface $shipment): bool
     {
         $request = new Dpd\EPrint\Request\ReceiveLabelRequest();
 
         $request->parcelnumber = $shipment->getTrackingNumber();
-        $request->countrycode  = $this->config['country_code'];
+        $request->countrycode = $this->config['country_code'];
         $request->centernumber = $this->config['center_number'];
-        $request->labelType    = $this->createLabelType();
+        $request->labelType = $this->createLabelType();
 
         try {
             $response = $this->getEPrintApi()->GetLabel($request);
@@ -303,8 +256,8 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
                 $this->createLabel(
                     $l->label,
                     $type,
-                    OrderShipmentLabel::FORMAT_PNG,
-                    OrderShipmentLabel::SIZE_A6
+                    Shipment\ShipmentLabelInterface::FORMAT_PNG,
+                    Shipment\ShipmentLabelInterface::SIZE_A6
                 )
             );
         }
@@ -319,11 +272,9 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
     /**
      * Performs single shipment through DPD API.
      *
-     * @param Shipment\ShipmentInterface $shipment
-     *
      * @return bool Whether the operation succeeded.
      */
-    protected function doSingleShipment(Shipment\ShipmentInterface $shipment)
+    protected function doSingleShipment(Shipment\ShipmentInterface $shipment): bool
     {
         $request = $this->createSingleShipmentRequest($shipment);
 
@@ -340,7 +291,7 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
         if (false === $s = current($result->shipments)) {
             return false;
         }
-        $shipment->setTrackingNumber($s->parcelnumber);
+        $shipment->setTrackingNumber((string)$s->parcelnumber);
 
         // Shipment labels
         /** @var Dpd\EPrint\Model\Label $l */
@@ -349,8 +300,8 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
                 $this->createLabel(
                     $l->label,
                     $this->convertLabelType($l->type),
-                    OrderShipmentLabel::FORMAT_PNG,
-                    OrderShipmentLabel::SIZE_A6
+                    Shipment\ShipmentLabelInterface::FORMAT_PNG,
+                    Shipment\ShipmentLabelInterface::SIZE_A6
                 )
             );
         }
@@ -358,13 +309,10 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
         return true;
     }
 
-    /**
-     * @inheritDoc
-     */
-    protected function createLabel($content, $type, $format, $size)
+    protected function createLabel(string $content, string $type, string $format, string $size): OrderShipmentLabel
     {
         if (false === $img = imagecreatefromstring($content)) {
-            throw new RuntimeException("Unexpected label image data.");
+            throw new RuntimeException('Unexpected label image data.');
         }
 
         // Rotate 270°
@@ -384,11 +332,9 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
     /**
      * Performs multi (with parcels) shipment through DPD API.
      *
-     * @param Shipment\ShipmentInterface $shipment
-     *
      * @return bool Whether the operation succeeded.
      */
-    protected function doMultiShipment(Shipment\ShipmentInterface $shipment)
+    protected function doMultiShipment(Shipment\ShipmentInterface $shipment): bool
     {
         $request = $this->createMultiShipmentRequest($shipment);
 
@@ -405,20 +351,20 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
         foreach ($result->shipments as $s) {
             /** @var Shipment\ShipmentParcelInterface $parcel */
             if (null === $parcel = $shipment->getParcels()->get($index)) {
-                throw new RuntimeException("Inconsistency between response's slaves and shipment's parcels.");
+                throw new RuntimeException('Inconsistency between response\'s slaves and shipment\'s parcels.');
             }
 
-            $parcel->setTrackingNumber($s->parcelnumber);
+            $parcel->setTrackingNumber((string)$s->parcelnumber);
 
             if (!$this->doGetLabel($parcel)) {
-                throw new RuntimeException("Failed to retrieve shipment label.");
+                throw new RuntimeException('Failed to retrieve shipment label.');
             }
 
             $index++;
         }
 
         if (!$this->hasTrackingNumber($shipment)) {
-            throw new RuntimeException("Failed to set all parcel's tracking numbers.");
+            throw new RuntimeException('Failed to set all parcel\'s tracking numbers.');
         }
 
         return true;
@@ -426,52 +372,49 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
 
     /**
      * Creates the shipment with labels request.
-     *
-     * @param Shipment\ShipmentInterface $shipment
-     *
-     * @return Dpd\EPrint\Request\StdShipmentLabelRequest
      */
-    protected function createSingleShipmentRequest(Shipment\ShipmentInterface $shipment)
-    {
+    protected function createSingleShipmentRequest(
+        Shipment\ShipmentInterface $shipment
+    ): Dpd\EPrint\Request\StdShipmentLabelRequest {
         if ($shipment->hasParcels()) {
-            throw new InvalidArgumentException("Expected shipment without parcel.");
+            throw new InvalidArgumentException('Expected shipment without parcel.');
         }
 
-        $request                        = new Dpd\EPrint\Request\StdShipmentLabelRequest();
+        $request = new Dpd\EPrint\Request\StdShipmentLabelRequest();
         $request->customer_centernumber = $this->config['center_number'];
-        $request->customer_countrycode  = $this->config['country_code'];
-        $request->customer_number       = $this->config['customer_number'];
+        $request->customer_countrycode = $this->config['country_code'];
+        $request->customer_number = $this->config['customer_number'];
 
         // (Optional) Label type: PNG, PDF, PDF_A6
         $request->labelType = $this->createLabelType();
 
         // Receiver address
-        $receiver                 = $this->addressResolver->resolveReceiverAddress($shipment, true);
+        $receiver = $this->addressResolver->resolveReceiverAddress($shipment, true);
         $request->receiveraddress = $this->createAddress($receiver);
 
         // (Optional) Receiver address optional info
         $request->receiverinfo = $this->createAddressInfo($receiver);
 
         // Shipper address
-        $shipper                 = $this->addressResolver->resolveSenderAddress($shipment, true);
+        $shipper = $this->addressResolver->resolveSenderAddress($shipment, true);
         $request->shipperaddress = $this->createAddress($shipper);
 
         // Shipment weight
         if (0 >= $weight = $shipment->getWeight()) {
             $weight = $this->weightCalculator->calculateShipment($shipment);
         }
-        $request->weight = round($weight, 2); // kg
+        $request->weight = $weight->toFixed(2); // kg
 
         // (Optional) Theoretical shipment date ('d/m/Y' or 'd.m.Y')
         $request->shippingdate = date('d/m/Y');
 
         // (Optional) References and comment
         $request->referencenumber = $shipment->getNumber();
-        $request->reference2      = $shipment->getSale()->getNumber();
+        $request->reference2 = $shipment->getSale()->getNumber();
 
         $data = $shipment->getGatewayData();
         if (isset($data['insurance']) && $data['insurance']) {
-            $request->services                 = new Dpd\EPrint\Model\StdServices();
+            $request->services = new Dpd\EPrint\Model\StdServices();
             $request->services->extraInsurance = $this->createExtraInsurance($shipment);
         }
 
@@ -482,59 +425,52 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
 
     /**
      * Creates the DPD extra insurance object.
-     *
-     * @param Shipment\ShipmentDataInterface $shipment
-     *
-     * @return Dpd\EPrint\Model\ExtraInsurance
      */
-    protected function createExtraInsurance(Shipment\ShipmentDataInterface $shipment)
+    protected function createExtraInsurance(Shipment\ShipmentDataInterface $shipment): Dpd\EPrint\Model\ExtraInsurance
     {
         $value = $shipment->getValorization();
         if (0 >= $value) {
             if ($shipment instanceof Shipment\ShipmentInterface) {
                 $value = $this->calculateGoodsValue($shipment);
             } elseif ($shipment instanceof Shipment\ShipmentParcelInterface) {
-                throw new ShipmentGatewayException("Parcel's valorization must be set.");
+                throw new ShipmentGatewayException('Parcel\'s valorization must be set.');
             } else {
-                throw new InvalidArgumentException("Expected shipment or parcel");
+                throw new InvalidArgumentException('Expected shipment or parcel');
             }
         }
 
         $insurance = new Dpd\EPrint\Model\ExtraInsurance();
 
-        $insurance->type  = Dpd\EPrint\Enum\ETypeInsurance::BY_SHIPMENTS;
-        $insurance->value = (string)round($value, 2);
+        $insurance->type = Dpd\EPrint\Enum\ETypeInsurance::BY_SHIPMENTS;
+        $insurance->value = $value->toFixed(2);
 
         return $insurance;
     }
 
     /**
      * Creates the multi shipment request.
-     *
-     * @param Shipment\ShipmentInterface $shipment
-     *
-     * @return Dpd\EPrint\Request\MultiShipmentRequest
      */
-    protected function createMultiShipmentRequest(Shipment\ShipmentInterface $shipment)
-    {
+    protected function createMultiShipmentRequest(
+        Shipment\ShipmentInterface $shipment
+    ): Dpd\EPrint\Request\MultiShipmentRequest {
         if (!$shipment->hasParcels()) {
-            throw new InvalidArgumentException("Expected shipment with parcels.");
+            throw new InvalidArgumentException('Expected shipment with parcels.');
         }
 
-        $request                        = new Dpd\EPrint\Request\MultiShipmentRequest();
+        $request = new Dpd\EPrint\Request\MultiShipmentRequest();
         $request->customer_centernumber = $this->config['center_number'];
-        $request->customer_countrycode  = $this->config['country_code'];
-        $request->customer_number       = $this->config['customer_number'];
+        $request->customer_countrycode = $this->config['country_code'];
+        $request->customer_number = $this->config['customer_number'];
 
         // Receiver address
-        $receiver                 = $this->addressResolver->resolveReceiverAddress($shipment);
+        $receiver = $this->addressResolver->resolveReceiverAddress($shipment);
         $request->receiveraddress = $this->createAddress($receiver);
 
         // (Optional) Receiver address optional info
         $request->receiverinfo = $this->createAddressInfo($receiver);
 
         // Shipper address
-        $shipper                 = $this->addressResolver->resolveSenderAddress($shipment);
+        $shipper = $this->addressResolver->resolveSenderAddress($shipment);
         $request->shipperaddress = $this->createAddress($shipper);
 
         // (Optional) Theoretical shipment date ('d/m/Y' or 'd.m.Y')
@@ -546,14 +482,15 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
 
         $index = 0;
         foreach ($shipment->getParcels() as $parcel) {
-            $slave                  = new Dpd\EPrint\Model\SlaveRequest();
-            $slave->weight          = round($parcel->getWeight(), 2); // kg
+            $weight = $parcel->getWeight() ?: new Decimal(0);
+            $slave = new Dpd\EPrint\Model\SlaveRequest();
+            $slave->weight = $weight->toFixed(2); // kg
             $slave->referencenumber = $shipment->getNumber() . '_' . $index;
-            $slave->reference2      = $shipment->getSale()->getNumber();
-            $slave->reference3      = 'parcel#' . $parcel->getId();
+            $slave->reference2 = $shipment->getSale()->getNumber();
+            $slave->reference3 = 'parcel#' . $parcel->getId();
 
             if ($addInsurance) {
-                $slave->services                 = new Dpd\EPrint\Model\SlaveServices();
+                $slave->services = new Dpd\EPrint\Model\SlaveServices();
                 $slave->services->extraInsurance = $this->createExtraInsurance($parcel);
             }
 
@@ -567,14 +504,11 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
 
     /**
      * Creates a EPrint address from the given component address.
-     *
-     * @param AddressInterface         $address
-     * @param Dpd\EPrint\Model\Address $target
-     *
-     * @return Dpd\EPrint\Model\Address
      */
-    protected function createAddress(AddressInterface $address, Dpd\EPrint\Model\Address $target = null)
-    {
+    protected function createAddress(
+        AddressInterface         $address,
+        Dpd\EPrint\Model\Address $target = null
+    ): Dpd\EPrint\Model\Address {
         if (null === $target) {
             $target = new Dpd\EPrint\Model\Address();
         }
@@ -592,9 +526,9 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
         }
 
         $target->countryPrefix = $address->getCountry()->getCode();
-        $target->zipCode       = str_replace(' ', '', $address->getPostalCode()); // DPD don't like spaces :(
-        $target->city          = $address->getCity();
-        $target->street        = $address->getStreet();
+        $target->zipCode = str_replace(' ', '', $address->getPostalCode()); // DPD don't like spaces :(
+        $target->city = $address->getCity();
+        $target->street = $address->getStreet();
 
         if (null === $phone = $address->getPhone()) {
             $phone = $address->getMobile();
@@ -609,14 +543,10 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
 
     /**
      * Creates EPrint address info from the given component address.
-     *
-     * @param AddressInterface $address
-     *
-     * @return Dpd\EPrint\Model\AddressInfo|null
      */
-    protected function createAddressInfo(AddressInterface $address)
+    protected function createAddressInfo(AddressInterface $address): ?Dpd\EPrint\Model\AddressInfo
     {
-        $info  = new Dpd\EPrint\Model\AddressInfo();
+        $info = new Dpd\EPrint\Model\AddressInfo();
         $empty = true;
 
         if ($address->getFirstName() && $address->getLastName() && $address->getCompany()) {
@@ -625,27 +555,27 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
         }
         if ($address->getComplement()) {
             $info->vinfo1 = $address->getComplement();
-            $empty        = false;
+            $empty = false;
         }
         if ($address->getSupplement()) {
             $info->vinfo2 = $address->getSupplement();
-            $empty        = false;
+            $empty = false;
         }
         if ($address->getExtra()) {
             $info->name3 = $address->getExtra();
-            $empty       = false;
+            $empty = false;
         }
         if ($address->getDigicode1()) {
             $info->digicode1 = $address->getDigicode1();
-            $empty           = false;
+            $empty = false;
         }
         if ($address->getDigicode2()) {
             $info->digicode2 = $address->getDigicode2();
-            $empty           = false;
+            $empty = false;
         }
         if ($address->getIntercom()) {
             $info->intercomid = $address->getIntercom();
-            $empty            = false;
+            $empty = false;
         }
 
         return $empty ? null : $info;
@@ -653,15 +583,13 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
 
     /**
      * Creates EPrint customer.
-     *
-     * @return Dpd\EPrint\Model\Customer
      */
-    protected function createCustomer()
+    protected function createCustomer(): Dpd\EPrint\Model\Customer
     {
         $customer = new Dpd\EPrint\Model\Customer();
 
-        $customer->number       = $this->config['customer_number'];
-        $customer->countrycode  = $this->config['country_code'];
+        $customer->number = $this->config['customer_number'];
+        $customer->countrycode = $this->config['country_code'];
         $customer->centernumber = $this->config['center_number'];
 
         return $customer;
@@ -669,21 +597,17 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
 
     /**
      * Creates EPrint parcel from the given component shipment data.
-     *
-     * @param Shipment\ShipmentDataInterface $shipment
-     *
-     * @return Dpd\EPrint\Model\Parcel
      */
-    protected function createParcel(Shipment\ShipmentDataInterface $shipment)
+    protected function createParcel(Shipment\ShipmentDataInterface $shipment): Dpd\EPrint\Model\Parcel
     {
         if (empty($shipment->getTrackingNumber())) {
-            throw new RuntimeException("Shipment (or parcel) must have its tracking number.");
+            throw new RuntimeException('Shipment (or parcel) must have its tracking number.');
         }
 
         $parcel = new Dpd\EPrint\Model\Parcel();
 
         $parcel->parcelnumber = $shipment->getTrackingNumber();
-        $parcel->countrycode  = $this->config['country_code'];
+        $parcel->countrycode = $this->config['country_code'];
         $parcel->centernumber = $this->config['center_number'];
 
         return $parcel;
@@ -691,10 +615,8 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
 
     /**
      * Creates a EPrint label type.
-     *
-     * @return Dpd\EPrint\Model\LabelType
      */
-    protected function createLabelType()
+    protected function createLabelType(): Dpd\EPrint\Model\LabelType
     {
         $labelType = new Dpd\EPrint\Model\LabelType();
 
@@ -705,31 +627,25 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
 
     /**
      * Converts the DPD label type to the commerce label type.
-     *
-     * @param string $type
-     *
-     * @return string
      */
-    protected function convertLabelType(string $type)
+    protected function convertLabelType(string $type): string
     {
         switch ($type) {
             case Dpd\EPrint\Enum\EType::REVERSE:
-                return OrderShipmentLabel::TYPE_RETURN;
+                return Shipment\ShipmentLabelInterface::TYPE_RETURN;
             case Dpd\EPrint\Enum\EType::PROOF:
-                return OrderShipmentLabel::TYPE_PROOF;
+                return Shipment\ShipmentLabelInterface::TYPE_PROOF;
             case Dpd\EPrint\Enum\EType::EPRINT_ATTACHMENT:
-                return OrderShipmentLabel::TYPE_SUMMARY;
+                return Shipment\ShipmentLabelInterface::TYPE_SUMMARY;
         }
 
-        return OrderShipmentLabel::TYPE_SHIPMENT;
+        return Shipment\ShipmentLabelInterface::TYPE_SHIPMENT;
     }
 
     /**
      * Returns the EPrint api.
-     *
-     * @return Dpd\EPrint\Api
      */
-    protected function getEPrintApi()
+    protected function getEPrintApi(): Dpd\EPrint\Api
     {
         if (null !== $this->ePrintApi) {
             return $this->ePrintApi;
@@ -752,7 +668,7 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
      *
      * @return string
      */
-    protected function formatPhoneNumber($number)
+    protected function formatPhoneNumber($number): string
     {
         if ($number instanceof PhoneNumber) {
             if (null === $this->phoneUtil) {

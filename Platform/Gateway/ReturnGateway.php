@@ -1,15 +1,20 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Ekyna\Bundle\DpdBundle\Platform\Gateway;
 
+use DateTime;
 use Ekyna\Component\Commerce\Exception\InvalidArgumentException;
 use Ekyna\Component\Commerce\Exception\ShipmentGatewayException;
-use Ekyna\Component\Commerce\Shipment\Model as Shipment;
 use Ekyna\Component\Commerce\Shipment\Gateway;
+use Ekyna\Component\Commerce\Shipment\Model as Shipment;
 use Ekyna\Component\Dpd;
 use Symfony\Component\Form\Extension\Core\Type;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\Validator\Constraints as Assert;
+
+use function Symfony\Component\Translation\t;
 
 /**
  * Class ReturnGateway
@@ -18,10 +23,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  */
 class ReturnGateway extends AbstractGateway
 {
-    /**
-     * @inheritDoc
-     */
-    public function getActions()
+    public function getActions(): array
     {
         return [
             Gateway\GatewayActions::SHIP,
@@ -32,10 +34,7 @@ class ReturnGateway extends AbstractGateway
         ];
     }
 
-    /**
-     * @inheritdoc
-     */
-    public function cancel(Shipment\ShipmentInterface $shipment)
+    public function cancel(Shipment\ShipmentInterface $shipment): bool
     {
         $this->supportShipment($shipment);
 
@@ -48,24 +47,18 @@ class ReturnGateway extends AbstractGateway
             }
         }
 
-        $result |= parent::cancel($shipment);
-
-        return $result;
+        return parent::cancel($shipment) || $result;
     }
 
-    /**
-     * @inheritDoc
-     */
-    public function buildForm(FormInterface $form)
+    public function buildForm(FormInterface $form): void
     {
         parent::buildForm($form);
 
         $form
             ->add('parcel_count', Type\IntegerType::class, [
-                'label'              => 'parcel_count',
-                'translation_domain' => 'Dpd',
-                'required'           => true,
-                'constraints'        => [
+                'label'       => t('parcel_count', [], 'Dpd'),
+                'required'    => true,
+                'constraints' => [
                     new Assert\NotBlank(),
                     new Assert\Type('int'),
                     new Assert\Range([
@@ -76,7 +69,6 @@ class ReturnGateway extends AbstractGateway
             ])
             ->add('pick_date', Type\DateTimeType::class, [
                 'label'              => 'pick_date',
-                'format'             => 'dd/MM/yyyy',
                 'input'              => 'string',
                 'data_class'         => null,
                 'translation_domain' => 'Dpd',
@@ -87,56 +79,44 @@ class ReturnGateway extends AbstractGateway
                 ],
             ])
             ->add('time_from', Type\TextType::class, [
-                'label'              => 'time_from',
-                'translation_domain' => 'Dpd',
-                'required'           => false,
-                'constraints'        => [
+                'label'       => t('time_from', [], 'Dpd'),
+                'required'    => false,
+                'constraints' => [
                     new Assert\Regex([
                         'pattern' => '~^[0-2][0-9]:[0-5][0-9]$~',
                     ]),
                 ],
             ])
             ->add('time_to', Type\TextType::class, [
-                'label'              => 'time_to',
-                'translation_domain' => 'Dpd',
-                'required'           => false,
-                'constraints'        => [
+                'label'       => t('time_to', [], 'Dpd'),
+                'required'    => false,
+                'constraints' => [
                     new Assert\Regex([
                         'pattern' => '~^[0-2][0-9]:[0-5][0-9]$~',
                     ]),
                 ],
             ])
             ->add('remark', Type\TextType::class, [
-                'label'              => 'remark',
-                'translation_domain' => 'Dpd',
-                'required'           => false,
+                'label'    => t('remark', [], 'Dpd'),
+                'required' => false,
             ])
             ->add('pick_remark', Type\TextType::class, [
-                'label'              => 'pick_remark',
-                'translation_domain' => 'Dpd',
-                'required'           => false,
+                'label'    => t('pick_remark', [], 'Dpd'),
+                'required' => false,
             ])
             ->add('delivery_remark', Type\TextType::class, [
-                'label'              => 'delivery_remark',
-                'translation_domain' => 'Dpd',
-                'required'           => false,
+                'label'    => t('delivery_remark', [], 'Dpd'),
+                'required' => false,
             ]);
     }
 
-    /**
-     * Performs single return shipment through DPD API.
-     *
-     * @param Shipment\ShipmentInterface $shipment
-     *
-     * @return bool Whether the operation succeeded.
-     */
-    protected function doSingleShipment(Shipment\ShipmentInterface $shipment)
+    protected function doSingleShipment(Shipment\ShipmentInterface $shipment): bool
     {
         if ($shipment->hasParcels()) {
-            throw new InvalidArgumentException("Expected shipment without parcel.");
+            throw new InvalidArgumentException('Expected shipment without parcel.');
         }
         if (!$shipment->isReturn()) {
-            throw new InvalidArgumentException("Expected return shipment.");
+            throw new InvalidArgumentException('Expected return shipment.');
         }
 
         $request = $this->createCollectionRequest($shipment);
@@ -154,22 +134,19 @@ class ReturnGateway extends AbstractGateway
         if (false === $s = current($shipments)) {
             return false;
         }
-        $shipment->setTrackingNumber($s->parcelnumber);
+        $shipment->setTrackingNumber((string)$s->parcelnumber);
 
         return true;
     }
 
     /**
      * Creates the collection request.
-     *
-     * @param Shipment\ShipmentInterface $shipment
-     *
-     * @return Dpd\EPrint\Request\CollectionRequestRequest
      */
-    protected function createCollectionRequest(Shipment\ShipmentInterface $shipment)
-    {
+    protected function createCollectionRequest(
+        Shipment\ShipmentInterface $shipment
+    ): Dpd\EPrint\Request\CollectionRequestRequest {
         if (!$shipment->isReturn()) {
-            throw new InvalidArgumentException("Expected return shipment.");
+            throw new InvalidArgumentException('Expected return shipment.');
         }
 
         $request = new Dpd\EPrint\Request\CollectionRequestRequest();
@@ -218,7 +195,7 @@ class ReturnGateway extends AbstractGateway
         }
 
         $request->parcel_count = intval($data['parcel_count']);
-        $request->pick_date = (new \DateTime($data['pick_date']))->format('d/m/Y'); // Pick date ('d/m/Y' or 'd.m.Y')
+        $request->pick_date = (new DateTime($data['pick_date']))->format('d/m/Y'); // Pick date ('d/m/Y' or 'd.m.Y')
         $request->time_from = $data['time_from'];
         $request->time_to = $data['time_to'];
         $request->remark = $data['remark'];
@@ -236,12 +213,8 @@ class ReturnGateway extends AbstractGateway
 
     /**
      * Cancels the return through DPD Api.
-     *
-     * @param Shipment\ShipmentInterface $shipment
-     *
-     * @return bool
      */
-    protected function doCancelShipment(Shipment\ShipmentInterface $shipment)
+    protected function doCancelShipment(Shipment\ShipmentInterface $shipment): bool
     {
         // Shipment request
         $request = new Dpd\EPrint\Request\TerminateCollectionRequestRequest();
@@ -257,20 +230,14 @@ class ReturnGateway extends AbstractGateway
         return true;
     }
 
-    /**
-     * @inheritDoc
-     */
-    protected function getDefaultLabelTypes()
+    protected function getDefaultLabelTypes(): array
     {
         return [
             Shipment\ShipmentLabelInterface::TYPE_RETURN,
         ];
     }
 
-    /**
-     * @inheritDoc
-     */
-    public function getCapabilities()
+    public function getCapabilities(): int
     {
         return static::CAPABILITY_RETURN;
     }

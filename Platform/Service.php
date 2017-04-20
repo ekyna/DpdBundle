@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Ekyna\Bundle\DpdBundle\Platform;
 
 use Ekyna\Component\Commerce\Exception\InvalidArgumentException;
@@ -9,47 +11,47 @@ use Ekyna\Component\Commerce\Exception\InvalidArgumentException;
  * @package Ekyna\Bundle\DpdBundle\Platform
  * @author  Etienne Dauvergne <contact@ekyna.com>
  */
-abstract class Service
+final class Service
 {
-    const CLASSIC      = 'Classic';
-    const PREDICT      = 'Predict';
-    const RELAY        = 'Relay';
-    const RETURN       = 'Return';
-    const RELAY_RETURN = 'RelayReturn';
+    public const CLASSIC      = 'Classic';
+    public const PREDICT      = 'Predict';
+    public const RELAY        = 'Relay';
+    public const RETURN       = 'Return';
+    public const RELAY_RETURN = 'RelayReturn';
 
 
     /**
      * Returns the available services codes.
      *
-     * @return array|string[]
+     * @return array<string>
      */
-    static public function getCodes()
+    public static function getCodes(): array
     {
         return [
-            static::CLASSIC,
-            static::PREDICT,
-            static::RELAY,
-            static::RETURN,
-            static::RELAY_RETURN,
+            self::CLASSIC,
+            self::PREDICT,
+            self::RELAY,
+            self::RETURN,
+            self::RELAY_RETURN,
         ];
     }
 
     /**
-     * Returns whether or not the given code is valid.
+     * Returns whether the given code is valid.
      *
      * @param string $code
      * @param bool   $throw
      *
      * @return bool
      */
-    static public function isValid($code, $throw = true)
+    public static function isValid(string $code, bool $throw = true): bool
     {
-        if (in_array($code, static::getCodes())) {
+        if (in_array($code, self::getCodes())) {
             return true;
         }
 
         if ($throw) {
-            throw new InvalidArgumentException("Unexpected DPD service code.");
+            throw new InvalidArgumentException('Unexpected DPD service code.');
         }
 
         return false;
@@ -62,18 +64,18 @@ abstract class Service
      *
      * @return string
      */
-    static public function getLabel($code)
+    public static function getLabel(string $code): string
     {
-        static::isValid($code);
+        self::isValid($code);
 
         switch ($code) {
-            case static::RELAY:
+            case self::RELAY:
                 return 'DPD Relais';
-            case static::PREDICT:
+            case self::PREDICT:
                 return 'DPD Predict';
-            case static::RETURN:
+            case self::RETURN:
                 return 'DPD Retour';
-            case static::RELAY_RETURN:
+            case self::RELAY_RETURN:
                 return 'DPD Retour par relais';
             default:
                 return 'DPD Classic';
@@ -85,12 +87,12 @@ abstract class Service
      *
      * @return array
      */
-    static public function getChoices()
+    public static function getChoices(): array
     {
         $choices = [];
 
-        foreach (static::getCodes() as $code) {
-            $choices[static::getLabel($code)] = $code;
+        foreach (self::getCodes() as $code) {
+            $choices[self::getLabel($code)] = $code;
         }
 
         return $choices;
