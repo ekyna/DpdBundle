@@ -1,0 +1,8 @@
+insurance: Assurance
+parcel_count: Nombre de colis
+pick_date: Date d'enlèvement
+time_from: Début horaire d'enlèvement
+time_to: Fin horaire d'enlèvement
+remark: Commentaire
+pick_remark: Instruction d'enlèvement
+delivery_remark: Instruction de livraison

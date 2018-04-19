@@ -1,0 +1,29 @@
+{
+    "name": "ekyna/dpd-bundle",
+    "description": "DPD shipment bundle for EkynaCommerceBundle",
+    "type": "symfony-bundle",
+    "authors": [
+        {
+            "name": "Etienne Dauvergne",
+            "homepage": "http://ekyna.com"
+        }
+    ],
+    "keywords": [
+        "symfony",
+        "shipment",
+        "dpd",
+        "bundle"
+    ],
+    "homepage": "https://github.com/ekyna/DpdBundle",
+    "license": "MIT",
+    "require": {
+        "php": ">=7.0",
+        "ekyna/commerce-bundle": "0.7.x-dev",
+        "ekyna/dpd": "1.0.x-dev"
+    },
+    "autoload": {
+        "psr-4": {
+            "Ekyna\\Bundle\\DpdBundle\\": ""
+        }
+    }
+}
