@@ -321,7 +321,7 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
             // Create label
             $shipment->addLabel(
                 $this->createLabel(
-                    $this->rotateImageData($l->label),
+                    $l->label,
                     $type,
                     OrderShipmentLabel::FORMAT_PNG,
                     OrderShipmentLabel::SIZE_A6
@@ -367,10 +367,11 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
         $shipment->setTrackingNumber($s->parcelnumber);
 
         // Shipment labels
+        /** @var Dpd\EPrint\Model\Label $l */
         foreach ($result->labels as $l) {
             $shipment->addLabel(
                 $this->createLabel(
-                    $this->rotateImageData($l->label),
+                    $l->label,
                     $this->convertLabelType($l->type),
                     OrderShipmentLabel::FORMAT_PNG,
                     OrderShipmentLabel::SIZE_A6
@@ -382,27 +383,26 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
     }
 
     /**
-     * Rotates the given image data.
-     *
-     * @param string $data
-     *
-     * @return string
+     * @inheritDoc
      */
-    protected function rotateImageData(string $data)
+    protected function createLabel($content, $type, $format, $size)
     {
-        if (false === $img = imagecreatefromstring($data)) {
+        if (false === $img = imagecreatefromstring($content)) {
             throw new RuntimeException("Unexpected label image data.");
         }
 
+        // Rotate 270°
         $img = imagerotate($img, 270, 0);
+        // Crop
+        $img = imagecrop($img, ['x' => 23, 'y' => 36, 'width' => 783, 'height' => 1255]);
 
         ob_start();
         imagegif($img);
-        $data = ob_get_contents();
+        $content = ob_get_contents();
         ob_end_clean();
         imagedestroy($img);
 
-        return $data;
+        return parent::createLabel($content, $type, $format, $size);
     }
 
     /**
