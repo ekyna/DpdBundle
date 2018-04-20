@@ -18,7 +18,15 @@ class PredictGateway extends AbstractGateway
      */
     public function getCapabilities()
     {
-        return static::CAPABILITY_SHIPMENT | static::CAPABILITY_PARCEL | static::CAPABILITY_MOBILE;
+        return static::CAPABILITY_SHIPMENT | static::CAPABILITY_PARCEL;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getRequirements()
+    {
+        return static::REQUIREMENT_MOBILE;
     }
 
     /**
