@@ -3,6 +3,7 @@
 namespace Ekyna\Bundle\DpdBundle\Platform\Gateway;
 
 use Ekyna\Component\Commerce\Exception\InvalidArgumentException;
+use Ekyna\Component\Commerce\Exception\ShipmentGatewayException;
 use Ekyna\Component\Commerce\Shipment\Model as Shipment;
 use Ekyna\Component\Commerce\Shipment\Gateway;
 use Ekyna\Component\Dpd;
@@ -143,11 +144,7 @@ class ReturnGateway extends AbstractGateway
         try {
             $response = $this->getEPrintApi()->CreateCollectionRequest($request);
         } catch (Dpd\Exception\ExceptionInterface $e) {
-            if ($this->config['debug']) {
-                throw $e;
-            }
-
-            return false;
+            throw new ShipmentGatewayException($e->getMessage(), $e->getCode(), $e);
         }
 
         $shipments = $response->CreateCollectionRequestResult;
@@ -254,11 +251,7 @@ class ReturnGateway extends AbstractGateway
         try {
             $this->getEPrintApi()->TerminateCollectionRequest($request);
         } catch (Dpd\Exception\ExceptionInterface $e) {
-            if ($this->config['debug']) {
-                throw $e;
-            }
-
-            return false;
+            throw new ShipmentGatewayException($e->getMessage(), $e->getCode(), $e);
         }
 
         return true;

@@ -3,6 +3,7 @@
 namespace Ekyna\Bundle\DpdBundle\Platform\Gateway;
 
 use Ekyna\Component\Commerce\Exception\InvalidArgumentException;
+use Ekyna\Component\Commerce\Exception\ShipmentGatewayException;
 use Ekyna\Component\Commerce\Order\Entity\OrderShipmentLabel;
 use Ekyna\Component\Commerce\Shipment\Model as Shipment;
 use Ekyna\Component\Commerce\Shipment\Gateway;
@@ -34,11 +35,7 @@ class RelayReturnGateway extends AbstractRelayGateway
         try {
             $response = $this->getEPrintApi()->CreateReverseInverseShipmentWithLabels($request);
         } catch (Dpd\Exception\ExceptionInterface $e) {
-            if ($this->config['debug']) {
-                throw $e;
-            }
-
-            return false;
+            throw new ShipmentGatewayException($e->getMessage(), $e->getCode(), $e);
         }
 
         $result = $response->CreateReverseInverseShipmentWithLabelsResult;

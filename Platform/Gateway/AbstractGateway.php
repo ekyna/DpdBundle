@@ -263,11 +263,7 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
         try {
             $response = $this->getEPrintApi()->GetShipment($request);
         } catch (Dpd\Exception\ExceptionInterface $e) {
-            if ($this->config['debug']) {
-                throw $e;
-            }
-
-            return null;
+            throw new ShipmentGatewayException($e->getMessage(), $e->getCode(), $e);
         }
 
         return $response->GetShipmentResult;
@@ -292,11 +288,7 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
         try {
             $response = $this->getEPrintApi()->GetLabel($request);
         } catch (Dpd\Exception\ExceptionInterface $e) {
-            if ($this->config['debug']) {
-                throw $e;
-            }
-
-            return false;
+            throw new ShipmentGatewayException($e->getMessage(), $e->getCode(), $e);
         }
 
         $result = $response->GetLabelResult;
@@ -350,11 +342,7 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
         try {
             $response = $this->getEPrintApi()->CreateShipmentWithLabels($request);
         } catch (Dpd\Exception\ExceptionInterface $e) {
-            if ($this->config['debug']) {
-                throw $e;
-            }
-
-            return false;
+            throw new ShipmentGatewayException($e->getMessage(), $e->getCode(), $e);
         }
 
         $result = $response->CreateShipmentWithLabelsResult;
@@ -419,11 +407,7 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
         try {
             $response = $this->getEPrintApi()->CreateMultiShipment($request);
         } catch (Dpd\Exception\ExceptionInterface $e) {
-            if ($this->config['debug']) {
-                throw $e;
-            }
-
-            return false;
+            throw new ShipmentGatewayException($e->getMessage(), $e->getCode(), $e);
         }
 
         $result = $response->CreateMultiShipmentResult;

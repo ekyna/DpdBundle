@@ -3,6 +3,7 @@
 namespace Ekyna\Bundle\DpdBundle\Platform\Gateway;
 
 use Ekyna\Bundle\DpdBundle\Platform\DpdPlatform;
+use Ekyna\Component\Commerce\Exception\ShipmentGatewayException;
 use Ekyna\Component\Commerce\Shipment;
 use Ekyna\Component\Dpd;
 
@@ -86,8 +87,7 @@ abstract class AbstractRelayGateway extends AbstractGateway
         try {
             $response = $this->getPudoApi()->GetPudoList($request);
         } catch (Dpd\Exception\ExceptionInterface $e) {
-            echo "Error: " . $e->getMessage();
-            exit();
+            throw new ShipmentGatewayException($e->getMessage(), $e->getCode(), $e);
         }
 
         $return = new Shipment\Gateway\Model\ListRelayPointResponse();
@@ -112,8 +112,7 @@ abstract class AbstractRelayGateway extends AbstractGateway
             /** @var \Ekyna\Component\Dpd\Pudo\Response\GetPudoDetailsResponse $response */
             $response = $this->getPudoApi()->GetPudoDetails($request);
         } catch (Dpd\Exception\ExceptionInterface $e) {
-            echo "Error: " . $e->getMessage();
-            exit();
+            throw new ShipmentGatewayException($e->getMessage(), $e->getCode(), $e);
         }
 
         $return = new Shipment\Gateway\Model\GetRelayPointResponse();
