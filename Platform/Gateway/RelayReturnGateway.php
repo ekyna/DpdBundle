@@ -101,7 +101,10 @@ class RelayReturnGateway extends AbstractRelayGateway
         $request->shipperaddress = $this->createAddress($shipper);
 
         // Shipment weight
-        $request->weight = round($this->weightCalculator->calculateShipment($shipment), 2); // kg
+        if (0 >= $weight = $shipment->getWeight()) {
+            $weight = $this->weightCalculator->calculateShipment($shipment);
+        }
+        $request->weight = round($weight, 2); // kg
         $request->expire_offset = 15; // days (from shippingdate, min 7)
         $request->refasbarcode = true;
 

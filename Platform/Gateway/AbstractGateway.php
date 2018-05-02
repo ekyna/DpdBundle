@@ -469,7 +469,10 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
         $request->shipperaddress = $this->createAddress($shipper);
 
         // Shipment weight
-        $request->weight = round($this->weightCalculator->calculateShipment($shipment), 2); // kg
+        if (0 >= $weight = $shipment->getWeight()) {
+            $weight = $this->weightCalculator->calculateShipment($shipment);
+        }
+        $request->weight = round($weight, 2); // kg
 
         // (Optional) Theoretical shipment date ('d/m/Y' or 'd.m.Y')
         $request->shippingdate = date('d/m/Y');
