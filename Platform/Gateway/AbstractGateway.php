@@ -109,7 +109,7 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
         $this->supportShipment($shipment);
 
         if (!empty($number = $shipment->getTrackingNumber())) {
-            return sprintf(static::TRACK_URL, $number);
+            return sprintf(static::TRACK_URL, $this->config['country_code'].$this->config['center_number'].$number);
         }
 
         return null;
@@ -127,7 +127,7 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
         $this->supportShipment($shipment);
 
         if (!empty($number = $shipment->getTrackingNumber())) {
-            return sprintf(static::PROVE_URL, $number);
+            return sprintf(static::PROVE_URL, $this->config['country_code'].$this->config['center_number'].$number);
         }
 
         return null;
