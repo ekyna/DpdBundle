@@ -637,6 +637,22 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
             $info->vinfo2 = $address->getSupplement();
             $empty = false;
         }
+        if ($address->getExtra()) {
+            $info->name3 = $address->getExtra();
+            $empty = false;
+        }
+        if ($address->getDigicode1()) {
+            $info->digicode1 = $address->getDigicode1();
+            $empty = false;
+        }
+        if ($address->getDigicode2()) {
+            $info->digicode2 = $address->getDigicode2();
+            $empty = false;
+        }
+        if ($address->getIntercom()) {
+            $info->intercomid = $address->getIntercom();
+            $empty = false;
+        }
 
         return $empty ? null : $info;
     }
