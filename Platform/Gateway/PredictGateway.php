@@ -18,7 +18,7 @@ class PredictGateway extends AbstractGateway
      */
     public function getCapabilities()
     {
-        return static::CAPABILITY_SHIPMENT | static::CAPABILITY_PARCEL;
+        return static::CAPABILITY_SHIPMENT;
     }
 
     /**
@@ -37,19 +37,6 @@ class PredictGateway extends AbstractGateway
         $request = parent::createSingleShipmentRequest($shipment);
 
         $request->services = new EPrint\Model\StdServices();
-        $request->services->contact = $this->createContact($shipment);
-
-        return $request;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    protected function createMultiShipmentRequest(ShipmentInterface $shipment)
-    {
-        $request = parent::createMultiShipmentRequest($shipment);
-
-        $request->services = new EPrint\Model\MultiServices();
         $request->services->contact = $this->createContact($shipment);
 
         return $request;
@@ -82,9 +69,7 @@ class PredictGateway extends AbstractGateway
             return false;
         }
 
-        if ($shipment instanceof Shipment\ShipmentParcelInterface) {
-            $shipment = $shipment->getShipment();
-        }
+        /** @var Shipment\ShipmentInterface $shipment */
 
         $receiver = $this->addressResolver->resolveReceiverAddress($shipment, true);
 

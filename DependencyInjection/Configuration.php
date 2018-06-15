@@ -48,10 +48,13 @@ class Configuration implements ConfigurationInterface
                     ->end()
                 ->end()
                 ->booleanNode('cache')
-                    ->defaultValue(true)
+                    ->defaultTrue()
                 ->end()
                 ->booleanNode('debug')
                     ->defaultValue('%kernel.debug%')
+                ->end()
+                ->booleanNode('test')
+                    ->defaultFalse()
                 ->end()
             ->end();
 

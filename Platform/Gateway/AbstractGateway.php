@@ -109,7 +109,7 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
         $this->supportShipment($shipment);
 
         if (!empty($number = $shipment->getTrackingNumber())) {
-            return sprintf(static::TRACK_URL, $this->config['country_code'].$this->config['center_number'].$number);
+            return sprintf(static::TRACK_URL, $this->config['country_code'] . $this->config['center_number'] . $number);
         }
 
         return null;
@@ -127,7 +127,7 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
         $this->supportShipment($shipment);
 
         if (!empty($number = $shipment->getTrackingNumber())) {
-            return sprintf(static::PROVE_URL, $this->config['country_code'].$this->config['center_number'].$number);
+            return sprintf(static::PROVE_URL, $this->config['country_code'] . $this->config['center_number'] . $number);
         }
 
         return null;
@@ -183,7 +183,7 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
             'attr'               => [
                 'align_with_widget' => true,
             ],
-            'required' => false,
+            'required'           => false,
         ]);
     }
 
@@ -505,7 +505,7 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
         if (0 >= $value) {
             if ($shipment instanceof Shipment\ShipmentInterface) {
                 $value = $this->calculateGoodsValue($shipment);
-            } else if($shipment instanceof Shipment\ShipmentParcelInterface) {
+            } else if ($shipment instanceof Shipment\ShipmentParcelInterface) {
                 throw new ShipmentGatewayException("Parcel's valorization must be set.");
             } else {
                 throw new InvalidArgumentException("Expected shipment or parcel");
@@ -746,6 +746,7 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
             'password' => $this->config['eprint']['password'],
             'cache'    => $this->config['cache'],
             'debug'    => $this->config['debug'],
+            'test'     => $this->config['test'],
         ]);
     }
 
