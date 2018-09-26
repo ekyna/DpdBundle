@@ -591,10 +591,10 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
             $target = new Dpd\EPrint\Model\Address();
         }
 
-        if ($address->getFirstName() && $address->getLastName()) {
-            $target->name = $address->getFirstName() . ' ' . $address->getLastName();
-        } elseif ($address->getCompany()) {
+        if ($address->getCompany()) {
             $target->name = $address->getCompany();
+        } elseif ($address->getFirstName() && $address->getLastName()) {
+            $target->name = $address->getFirstName() . ' ' . $address->getLastName();
         }
 
         $target->countryPrefix = $address->getCountry()->getCode();
@@ -626,7 +626,7 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
         $empty = true;
 
         if ($address->getFirstName() && $address->getLastName() && $address->getCompany()) {
-            $info->name2 = $address->getCompany();
+            $info->name2 = $address->getFirstName() . ' ' . $address->getLastName();
             $empty = false;
         }
         if ($address->getComplement()) {
