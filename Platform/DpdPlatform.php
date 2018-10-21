@@ -2,7 +2,6 @@
 
 namespace Ekyna\Bundle\DpdBundle\Platform;
 
-use Ekyna\Bundle\CommerceBundle\Service\ConstantsHelper;
 use Ekyna\Bundle\SettingBundle\Manager\SettingsManagerInterface;
 use Ekyna\Component\Commerce\Exception\InvalidArgumentException;
 use Ekyna\Component\Commerce\Shipment\Gateway\AbstractPlatform;
@@ -24,11 +23,6 @@ class DpdPlatform extends AbstractPlatform
     protected $settingManager;
 
     /**
-     * @var ConstantsHelper
-     */
-    protected $constantsHelper;
-
-    /**
      * @var array
      */
     protected $config;
@@ -38,16 +32,11 @@ class DpdPlatform extends AbstractPlatform
      * Constructor.
      *
      * @param SettingsManagerInterface $settingManager
-     * @param ConstantsHelper          $constantsHelper
      * @param array                    $config
      */
-    public function __construct(
-        SettingsManagerInterface $settingManager,
-        ConstantsHelper $constantsHelper,
-        array $config = []
-    ) {
+    public function __construct(SettingsManagerInterface $settingManager, array $config = [])
+    {
         $this->settingManager = $settingManager;
-        $this->constantsHelper = $constantsHelper;
         $this->config = $config;
     }
 
@@ -83,7 +72,6 @@ class DpdPlatform extends AbstractPlatform
         $gateway = new $class($this, $name, array_replace($this->config, $this->processGatewayConfig($config)));
 
         $gateway->setSettingManager($this->settingManager);
-        $gateway->setConstantsHelper($this->constantsHelper);
 
         return $gateway;
     }

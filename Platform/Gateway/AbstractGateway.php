@@ -2,16 +2,15 @@
 
 namespace Ekyna\Bundle\DpdBundle\Platform\Gateway;
 
-use Ekyna\Bundle\CommerceBundle\Service\ConstantsHelper;
+use Ekyna\Bundle\SettingBundle\Manager\SettingsManagerInterface;
 use Ekyna\Component\Commerce\Common\Model\AddressInterface;
 use Ekyna\Component\Commerce\Exception\InvalidArgumentException;
 use Ekyna\Component\Commerce\Exception\RuntimeException;
 use Ekyna\Component\Commerce\Exception\ShipmentGatewayException;
 use Ekyna\Component\Commerce\Order\Entity\OrderShipmentLabel;
-use Ekyna\Component\Dpd;
-use Ekyna\Bundle\SettingBundle\Manager\SettingsManagerInterface;
 use Ekyna\Component\Commerce\Shipment\Gateway;
 use Ekyna\Component\Commerce\Shipment\Model as Shipment;
+use Ekyna\Component\Dpd;
 use libphonenumber\PhoneNumber;
 use libphonenumber\PhoneNumberFormat;
 use libphonenumber\PhoneNumberUtil;
@@ -34,11 +33,6 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
     protected $settingManager;
 
     /**
-     * @var ConstantsHelper
-     */
-    protected $constantsHelper;
-
-    /**
      * @var Dpd\EPrint\Api
      */
     private $ePrintApi;
@@ -57,16 +51,6 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
     public function setSettingManager(SettingsManagerInterface $settingManager)
     {
         $this->settingManager = $settingManager;
-    }
-
-    /**
-     * Sets the constants helper.
-     *
-     * @param ConstantsHelper $constantsHelper
-     */
-    public function setConstantsHelper(ConstantsHelper $constantsHelper)
-    {
-        $this->constantsHelper = $constantsHelper;
     }
 
     /**
@@ -166,7 +150,10 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
         } elseif ($shipment instanceof Shipment\ShipmentParcelInterface) {
             $this->addShipmentLabel($labels, $shipment, $types);
         } else {
-            throw new InvalidArgumentException();
+            throw new InvalidArgumentException(
+                "Expected instance of " . Shipment\ShipmentInterface::class
+                . " or " . Shipment\ShipmentParcelInterface::class
+            );
         }
 
         return $labels;
@@ -505,7 +492,7 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
         if (0 >= $value) {
             if ($shipment instanceof Shipment\ShipmentInterface) {
                 $value = $this->calculateGoodsValue($shipment);
-            } else if ($shipment instanceof Shipment\ShipmentParcelInterface) {
+            } elseif ($shipment instanceof Shipment\ShipmentParcelInterface) {
                 throw new ShipmentGatewayException("Parcel's valorization must be set.");
             } else {
                 throw new InvalidArgumentException("Expected shipment or parcel");

@@ -139,7 +139,7 @@ abstract class AbstractRelayGateway extends AbstractGateway
         $supplement = trim($item->getAddress3());
 
         $point
-            ->setPlatform(DpdPlatform::NAME)
+            ->setPlatformName(DpdPlatform::NAME)
             ->setNumber($item->getId())
             ->setCompany($item->getName())
             ->setStreet(trim($item->getAddress1()))

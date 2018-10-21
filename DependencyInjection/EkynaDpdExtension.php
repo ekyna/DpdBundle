@@ -26,7 +26,6 @@ class EkynaDpdExtension extends Extension
         $platformDef = new Definition(DpdPlatform::class);
         $platformDef->addTag('ekyna_commerce.shipment.gateway_platform');
         $platformDef->addArgument(new Reference('ekyna_setting.manager'));
-        $platformDef->addArgument(new Reference('ekyna_commerce.constants_helper'));
         $platformDef->addArgument($config);
         $container->setDefinition('ekyna_dpd.gateway_platform', $platformDef);
     }
