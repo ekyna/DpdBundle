@@ -1,0 +1,8 @@
+insurance: Insurance
+parcel_count: Parcels count
+pick_date: Pick date
+time_from: Pick schedule start time
+time_to: Pick schedule end time
+remark: Remark
+pick_remark: Pick remark
+delivery_remark: Delivery remark
