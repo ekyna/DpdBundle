@@ -585,7 +585,7 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
         }
 
         $target->countryPrefix = $address->getCountry()->getCode();
-        $target->zipCode = $address->getPostalCode();
+        $target->zipCode = str_replace(' ', '', $address->getPostalCode()); // DPD don't like spaces :(
         $target->city = $address->getCity();
         $target->street = $address->getStreet();
 
