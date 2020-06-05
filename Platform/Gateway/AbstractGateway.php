@@ -729,11 +729,12 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
         }
 
         return $this->ePrintApi = new Dpd\EPrint\Api([
-            'login'    => $this->config['eprint']['login'],
-            'password' => $this->config['eprint']['password'],
-            'cache'    => $this->config['cache'],
-            'debug'    => $this->config['debug'],
-            'test'     => $this->config['test'],
+            'login'     => $this->config['eprint']['login'],
+            'password'  => $this->config['eprint']['password'],
+            'cache'     => $this->config['cache'],
+            'debug'     => $this->config['debug'],
+            'test'      => $this->config['test'],
+            'ssl_check' => $this->config['ssl_check'],
         ]);
     }
 

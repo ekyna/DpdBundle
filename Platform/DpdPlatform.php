@@ -81,7 +81,6 @@ class DpdPlatform extends AbstractPlatform
      */
     protected function createConfigDefinition(Definition\Builder\NodeDefinition $rootNode)
     {
-        /** @noinspection PhpUndefinedMethodInspection */
         $rootNode
             ->children()
                 ->scalarNode('customer_number')

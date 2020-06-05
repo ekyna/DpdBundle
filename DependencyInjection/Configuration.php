@@ -56,6 +56,9 @@ class Configuration implements ConfigurationInterface
                 ->booleanNode('test')
                     ->defaultFalse()
                 ->end()
+                ->booleanNode('ssl_check')
+                    ->defaultTrue()
+                ->end()
             ->end();
 
         return $treeBuilder;
