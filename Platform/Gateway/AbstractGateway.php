@@ -4,6 +4,7 @@ namespace Ekyna\Bundle\DpdBundle\Platform\Gateway;
 
 use Ekyna\Bundle\SettingBundle\Manager\SettingsManagerInterface;
 use Ekyna\Component\Commerce\Common\Model\AddressInterface;
+use Ekyna\Component\Commerce\Common\Model\SaleAddressInterface;
 use Ekyna\Component\Commerce\Exception\InvalidArgumentException;
 use Ekyna\Component\Commerce\Exception\RuntimeException;
 use Ekyna\Component\Commerce\Exception\ShipmentGatewayException;
@@ -243,8 +244,8 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
      */
     protected function doGetShipment(Shipment\ShipmentDataInterface $shipment)
     {
-        $request = new Dpd\EPrint\Request\ShipmentRequest();
-        $request->parcel = $this->createParcel($shipment);
+        $request           = new Dpd\EPrint\Request\ShipmentRequest();
+        $request->parcel   = $this->createParcel($shipment);
         $request->customer = $this->createCustomer();
 
         try {
@@ -268,9 +269,9 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
         $request = new Dpd\EPrint\Request\ReceiveLabelRequest();
 
         $request->parcelnumber = $shipment->getTrackingNumber();
-        $request->countrycode = $this->config['country_code'];
+        $request->countrycode  = $this->config['country_code'];
         $request->centernumber = $this->config['center_number'];
-        $request->labelType = $this->createLabelType();
+        $request->labelType    = $this->createLabelType();
 
         try {
             $response = $this->getEPrintApi()->GetLabel($request);
@@ -436,23 +437,23 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
             throw new InvalidArgumentException("Expected shipment without parcel.");
         }
 
-        $request = new Dpd\EPrint\Request\StdShipmentLabelRequest();
+        $request                        = new Dpd\EPrint\Request\StdShipmentLabelRequest();
         $request->customer_centernumber = $this->config['center_number'];
-        $request->customer_countrycode = $this->config['country_code'];
-        $request->customer_number = $this->config['customer_number'];
+        $request->customer_countrycode  = $this->config['country_code'];
+        $request->customer_number       = $this->config['customer_number'];
 
         // (Optional) Label type: PNG, PDF, PDF_A6
         $request->labelType = $this->createLabelType();
 
         // Receiver address
-        $receiver = $this->addressResolver->resolveReceiverAddress($shipment, true);
+        $receiver                 = $this->addressResolver->resolveReceiverAddress($shipment, true);
         $request->receiveraddress = $this->createAddress($receiver);
 
         // (Optional) Receiver address optional info
         $request->receiverinfo = $this->createAddressInfo($receiver);
 
         // Shipper address
-        $shipper = $this->addressResolver->resolveSenderAddress($shipment, true);
+        $shipper                 = $this->addressResolver->resolveSenderAddress($shipment, true);
         $request->shipperaddress = $this->createAddress($shipper);
 
         // Shipment weight
@@ -466,11 +467,11 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
 
         // (Optional) References and comment
         $request->referencenumber = $shipment->getNumber();
-        $request->reference2 = $shipment->getSale()->getNumber();
+        $request->reference2      = $shipment->getSale()->getNumber();
 
         $data = $shipment->getGatewayData();
         if (isset($data['insurance']) && $data['insurance']) {
-            $request->services = new Dpd\EPrint\Model\StdServices();
+            $request->services                 = new Dpd\EPrint\Model\StdServices();
             $request->services->extraInsurance = $this->createExtraInsurance($shipment);
         }
 
@@ -501,7 +502,7 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
 
         $insurance = new Dpd\EPrint\Model\ExtraInsurance();
 
-        $insurance->type = Dpd\EPrint\Enum\ETypeInsurance::BY_SHIPMENTS;
+        $insurance->type  = Dpd\EPrint\Enum\ETypeInsurance::BY_SHIPMENTS;
         $insurance->value = (string)round($value, 2);
 
         return $insurance;
@@ -520,20 +521,20 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
             throw new InvalidArgumentException("Expected shipment with parcels.");
         }
 
-        $request = new Dpd\EPrint\Request\MultiShipmentRequest();
+        $request                        = new Dpd\EPrint\Request\MultiShipmentRequest();
         $request->customer_centernumber = $this->config['center_number'];
-        $request->customer_countrycode = $this->config['country_code'];
-        $request->customer_number = $this->config['customer_number'];
+        $request->customer_countrycode  = $this->config['country_code'];
+        $request->customer_number       = $this->config['customer_number'];
 
         // Receiver address
-        $receiver = $this->addressResolver->resolveReceiverAddress($shipment);
+        $receiver                 = $this->addressResolver->resolveReceiverAddress($shipment);
         $request->receiveraddress = $this->createAddress($receiver);
 
         // (Optional) Receiver address optional info
         $request->receiverinfo = $this->createAddressInfo($receiver);
 
         // Shipper address
-        $shipper = $this->addressResolver->resolveSenderAddress($shipment);
+        $shipper                 = $this->addressResolver->resolveSenderAddress($shipment);
         $request->shipperaddress = $this->createAddress($shipper);
 
         // (Optional) Theoretical shipment date ('d/m/Y' or 'd.m.Y')
@@ -545,14 +546,14 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
 
         $index = 0;
         foreach ($shipment->getParcels() as $parcel) {
-            $slave = new Dpd\EPrint\Model\SlaveRequest();
-            $slave->weight = round($parcel->getWeight(), 2); // kg
+            $slave                  = new Dpd\EPrint\Model\SlaveRequest();
+            $slave->weight          = round($parcel->getWeight(), 2); // kg
             $slave->referencenumber = $shipment->getNumber() . '_' . $index;
-            $slave->reference2 = $shipment->getSale()->getNumber();
-            $slave->reference3 = 'parcel#' . $parcel->getId();
+            $slave->reference2      = $shipment->getSale()->getNumber();
+            $slave->reference3      = 'parcel#' . $parcel->getId();
 
             if ($addInsurance) {
-                $slave->services = new Dpd\EPrint\Model\SlaveServices();
+                $slave->services                 = new Dpd\EPrint\Model\SlaveServices();
                 $slave->services->extraInsurance = $this->createExtraInsurance($parcel);
             }
 
@@ -582,12 +583,18 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
             $target->name = $address->getCompany();
         } elseif ($address->getFirstName() && $address->getLastName()) {
             $target->name = $address->getFirstName() . ' ' . $address->getLastName();
+        } elseif ($address instanceof SaleAddressInterface && $sale = $address->getSale()) {
+            if ($sale->getCompany()) {
+                $target->name = $sale->getCompany();
+            } elseif ($sale->getFirstName() && $sale->getLastName()) {
+                $target->name = $sale->getFirstName() . ' ' . $sale->getLastName();
+            }
         }
 
         $target->countryPrefix = $address->getCountry()->getCode();
-        $target->zipCode = str_replace(' ', '', $address->getPostalCode()); // DPD don't like spaces :(
-        $target->city = $address->getCity();
-        $target->street = $address->getStreet();
+        $target->zipCode       = str_replace(' ', '', $address->getPostalCode()); // DPD don't like spaces :(
+        $target->city          = $address->getCity();
+        $target->street        = $address->getStreet();
 
         if (null === $phone = $address->getPhone()) {
             $phone = $address->getMobile();
@@ -609,7 +616,7 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
      */
     protected function createAddressInfo(AddressInterface $address)
     {
-        $info = new Dpd\EPrint\Model\AddressInfo();
+        $info  = new Dpd\EPrint\Model\AddressInfo();
         $empty = true;
 
         if ($address->getFirstName() && $address->getLastName() && $address->getCompany()) {
@@ -618,27 +625,27 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
         }
         if ($address->getComplement()) {
             $info->vinfo1 = $address->getComplement();
-            $empty = false;
+            $empty        = false;
         }
         if ($address->getSupplement()) {
             $info->vinfo2 = $address->getSupplement();
-            $empty = false;
+            $empty        = false;
         }
         if ($address->getExtra()) {
             $info->name3 = $address->getExtra();
-            $empty = false;
+            $empty       = false;
         }
         if ($address->getDigicode1()) {
             $info->digicode1 = $address->getDigicode1();
-            $empty = false;
+            $empty           = false;
         }
         if ($address->getDigicode2()) {
             $info->digicode2 = $address->getDigicode2();
-            $empty = false;
+            $empty           = false;
         }
         if ($address->getIntercom()) {
             $info->intercomid = $address->getIntercom();
-            $empty = false;
+            $empty            = false;
         }
 
         return $empty ? null : $info;
@@ -653,8 +660,8 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
     {
         $customer = new Dpd\EPrint\Model\Customer();
 
-        $customer->number = $this->config['customer_number'];
-        $customer->countrycode = $this->config['country_code'];
+        $customer->number       = $this->config['customer_number'];
+        $customer->countrycode  = $this->config['country_code'];
         $customer->centernumber = $this->config['center_number'];
 
         return $customer;
@@ -676,7 +683,7 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
         $parcel = new Dpd\EPrint\Model\Parcel();
 
         $parcel->parcelnumber = $shipment->getTrackingNumber();
-        $parcel->countrycode = $this->config['country_code'];
+        $parcel->countrycode  = $this->config['country_code'];
         $parcel->centernumber = $this->config['center_number'];
 
         return $parcel;
