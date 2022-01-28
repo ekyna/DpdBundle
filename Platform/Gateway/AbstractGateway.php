@@ -287,11 +287,12 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
         $result = $response->CreateShipmentWithLabelsResult;
 
         // Tracking number
-        /** @var Dpd\EPrint\Model\Shipment $s */
-        if (false === $s = current($result->shipments)) {
+        /** @var Dpd\EPrint\Model\Shipment|false $current */
+        $current = $result->shipments->getIterator()->current();
+        if (false === $current) {
             return false;
         }
-        $shipment->setTrackingNumber((string)$s->parcelnumber);
+        $shipment->setTrackingNumber((string)$current->parcelnumber);
 
         // Shipment labels
         /** @var Dpd\EPrint\Model\Label $l */

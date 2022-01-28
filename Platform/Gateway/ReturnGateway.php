@@ -130,11 +130,12 @@ class ReturnGateway extends AbstractGateway
         $shipments = $response->CreateCollectionRequestResult;
 
         // Tracking number
-        /** @var Dpd\EPrint\Model\Shipment $s */
-        if (false === $s = current($shipments)) {
+        $current = $shipments->getIterator()->current();
+        /** @var Dpd\EPrint\Model\Shipment|false $current */
+        if (false === $current) {
             return false;
         }
-        $shipment->setTrackingNumber((string)$s->parcelnumber);
+        $shipment->setTrackingNumber((string)$current->parcelnumber);
 
         return true;
     }
