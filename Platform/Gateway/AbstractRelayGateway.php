@@ -7,6 +7,7 @@ namespace Ekyna\Bundle\DpdBundle\Platform\Gateway;
 use DateTime;
 use Decimal\Decimal;
 use Ekyna\Bundle\DpdBundle\Platform\DpdPlatform;
+use Ekyna\Component\Commerce\Common\Model\Address;
 use Ekyna\Component\Commerce\Exception\ShipmentGatewayException;
 use Ekyna\Component\Commerce\Shipment;
 use Ekyna\Component\Dpd;
@@ -62,8 +63,8 @@ abstract class AbstractRelayGateway extends AbstractGateway
     }
 
     public function listRelayPoints(
-        Shipment\Gateway\Model\Address $address,
-        Decimal                          $weight
+        Address $address,
+        Decimal $weight
     ): Shipment\Gateway\Model\ListRelayPointResponse {
         $request = new Dpd\Pudo\Request\GetPudoListRequest();
 
