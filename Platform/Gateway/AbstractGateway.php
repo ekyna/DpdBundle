@@ -34,6 +34,44 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
     public const TRACK_URL = 'https://www.dpd.fr/traces_%s';
     public const PROVE_URL = 'https://www.dpd.fr/preuvelivraison_%s';
 
+    private const COUNTRY_CODES =  [
+        'AD', // Andorra
+        'AT', // Austria
+        'BE', // Belgium
+        'BA', // Bosnia & Herzegovina
+        'BG', // Bulgaria
+        'HR', // Croatia
+        'DK', // Denmark
+        'ES', // Espagne
+        'EE', // Estonia
+        'FI', // Finland
+        'FR', // France
+        'GB', // United Kingdom
+        'GR', // Greece
+        'GG', // Guernsey
+        'HU', // Hungary
+        'IM', // Isle of Man
+        'IE', // Ireland
+        'IT', // Italy
+        'JE', // Jersey
+        'LV', // Latvia
+        'LI', // Liechtenstein
+        'LT', // Lithuania
+        'LU', // Luxembourg
+        'NO', // Norway
+        'NL', // Netherlands
+        'PL', // Poland
+        'PT', // Portugal
+        'CZ', // Czech Republic
+        'RO', // Romania
+        'RO', // Romania
+        'RS', // Serbia
+        'SK', // Slovakia
+        'SI', // Slovenia
+        'SE', // Sweden
+        'CH', // Switzerland
+    ];
+
     protected SettingManagerInterface $settingManager;
 
     private ?Dpd\EPrint\Api  $ePrintApi = null;
@@ -526,7 +564,12 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
             }
         }
 
-        $target->countryPrefix = $address->getCountry()->getCode();
+        $code = $address->getCountry()->getCode();
+        if (!in_array($code, self::COUNTRY_CODES, true)) {
+            $code = 'INT'; // Intercontinental
+        }
+
+        $target->countryPrefix = $code;
         $target->zipCode = str_replace(' ', '', $address->getPostalCode()); // DPD don't like spaces :(
         $target->city = $address->getCity();
         $target->street = $address->getStreet();
