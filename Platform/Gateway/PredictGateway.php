@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Ekyna\Bundle\DpdBundle\Platform\Gateway;
 
 use Ekyna\Component\Commerce\Shipment\Model as Shipment;
-use Ekyna\Component\Dpd\EPrint;
 use Ekyna\Component\Commerce\Shipment\Model\ShipmentInterface;
+use Ekyna\Component\Dpd;
 
 /**
  * Class PredictGateway
@@ -25,26 +25,21 @@ class PredictGateway extends AbstractGateway
         return static::REQUIREMENT_MOBILE;
     }
 
-    protected function createSingleShipmentRequest(ShipmentInterface $shipment): EPrint\Request\StdShipmentLabelRequest
-    {
+    protected function createSingleShipmentRequest(
+        ShipmentInterface $shipment
+    ): Dpd\EPrint\Request\StdShipmentLabelRequest {
         $request = parent::createSingleShipmentRequest($shipment);
 
-        $request->services = new EPrint\Model\StdServices();
+        $request->services = new Dpd\EPrint\Model\StdServices();
         $request->services->contact = $this->createContact($shipment);
 
         return $request;
     }
 
-    /**
-     * Creates the Predict contact.
-     */
-    protected function createContact(ShipmentInterface $shipment): EPrint\Model\Contact
+    protected function createContact(ShipmentInterface $shipment): Dpd\EPrint\Model\Contact
     {
-        $receiver = $this->addressResolver->resolveReceiverAddress($shipment, true);
-
-        $contact = new EPrint\Model\Contact();
-        $contact->type = EPrint\Enum\ETypeContact::PREDICT;
-        $contact->sms = $this->formatPhoneNumber($receiver->getMobile());
+        $contact = parent::createContact($shipment);
+        $contact->type = Dpd\EPrint\Enum\ETypeContact::PREDICT;
 
         return $contact;
     }

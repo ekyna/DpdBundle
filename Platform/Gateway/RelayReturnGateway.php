@@ -7,8 +7,8 @@ namespace Ekyna\Bundle\DpdBundle\Platform\Gateway;
 use DateTime;
 use Ekyna\Component\Commerce\Exception\InvalidArgumentException;
 use Ekyna\Component\Commerce\Exception\ShipmentGatewayException;
-use Ekyna\Component\Commerce\Shipment\Model as Shipment;
 use Ekyna\Component\Commerce\Shipment\Gateway;
+use Ekyna\Component\Commerce\Shipment\Model as Shipment;
 use Ekyna\Component\Dpd;
 use Symfony\Component\Form\FormInterface;
 
@@ -19,9 +19,15 @@ use Symfony\Component\Form\FormInterface;
  */
 class RelayReturnGateway extends AbstractRelayGateway
 {
+    private array $labelConfig = [
+        'dpd_label_type'     => Dpd\EPrint\Enum\ELabelType::PDF,
+        'ekyna_label_format' => Shipment\ShipmentLabelInterface::FORMAT_PDF,
+        'ekyna_label_size'   => Shipment\ShipmentLabelInterface::SIZE_A4,
+    ];
+
     public function buildForm(FormInterface $form): void
     {
-
+        // TODO Label config
     }
 
     protected function doSingleShipment(Shipment\ShipmentInterface $shipment): bool
@@ -29,24 +35,26 @@ class RelayReturnGateway extends AbstractRelayGateway
         $request = $this->createInverseShipmentRequest($shipment);
 
         try {
-            $response = $this->getEPrintApi()->CreateReverseInverseShipmentWithLabels($request);
+            $response = $this->getEPrintApi()->CreateReverseInverseShipmentWithLabelsBc($request);
         } catch (Dpd\Exception\ExceptionInterface $e) {
             throw new ShipmentGatewayException($e->getMessage(), $e->getCode(), $e);
         }
 
-        $result = $response->CreateReverseInverseShipmentWithLabelsResult;
+        $result = $response->CreateReverseInverseShipmentWithLabelsBcResult;
 
         // Tracking number
-        $shipment->setTrackingNumber((string)$result->shipment->parcelnumber);
+        $shipment->setTrackingNumber($result->Shipment->Shipment->BarcodeId);
+
+        $labelConfig = $this->getLabelFormatAndSize($request->labelType);
 
         // Shipment labels
-        foreach ($result->labels as $l) {
+        foreach ($result->Labels as $l) {
             $shipment->addLabel(
                 $this->createLabel(
                     $l->label,
                     $this->convertLabelType($l->type),
-                    Shipment\ShipmentLabelInterface::FORMAT_PNG,
-                    Shipment\ShipmentLabelInterface::SIZE_A5
+                    $labelConfig['format'],
+                    $labelConfig['size']
                 )
             );
         }
@@ -75,10 +83,6 @@ class RelayReturnGateway extends AbstractRelayGateway
         $request->customer_countrycode = $this->config['country_code'];
         $request->customer_number = $this->config['customer_number'];
 
-        // Services
-        // Insurance is not supported according to the documentation
-        //$request->services = new Dpd\EPrint\Model\ReverseInverseServices();
-
         // (Optional) Label type: PNG, PDF, PDF_A6
         $request->labelType = $this->createLabelType();
 
@@ -100,6 +104,11 @@ class RelayReturnGateway extends AbstractRelayGateway
         $request->weight = $weight->toFixed(2); // kg
         $request->expire_offset = 15; // days (from shippingdate, min 7)
         $request->refasbarcode = true;
+
+        // Services
+        // Insurance is not supported according to the documentation
+        $request->services = new Dpd\EPrint\Model\ReverseInverseServices();
+        $request->services->contact = $this->createContact($shipment);
 
         // (Optional) Theoretical shipment date ('d/m/Y' or 'd.m.Y')
         $request->shippingdate = (new DateTime('now'))->format('d/m/Y');

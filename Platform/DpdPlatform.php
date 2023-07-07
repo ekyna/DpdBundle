@@ -9,6 +9,7 @@ use Ekyna\Component\Commerce\Exception\InvalidArgumentException;
 use Ekyna\Component\Commerce\Shipment\Gateway\AbstractPlatform;
 use Ekyna\Component\Commerce\Shipment\Gateway\GatewayInterface;
 use Ekyna\Component\Commerce\Shipment\Gateway\PlatformActions;
+use Ekyna\Component\Dpd\EPrint\Enum\ELabelType;
 use Symfony\Component\Config\Definition;
 
 /**
@@ -44,6 +45,10 @@ class DpdPlatform extends AbstractPlatform
 
     public function createGateway(string $name, array $config = []): GatewayInterface
     {
+        $config = array_replace([
+            'label_type' => ELabelType::PNG,
+        ], $config);
+
         $class = sprintf('Ekyna\Bundle\DpdBundle\Platform\Gateway\%sGateway', $config['service']);
         if (!class_exists($class)) {
             throw new InvalidArgumentException(sprintf("Unexpected service '%s'", $config['service']));
@@ -76,6 +81,21 @@ class DpdPlatform extends AbstractPlatform
                 ->enumNode('service')
                     ->info('Service')
                     ->values(Service::getChoices())
+                    ->isRequired()
+                ->end()
+                ->enumNode('label_type')
+                    ->info('Label Type')
+                    ->defaultValue(ELabelType::PDF)
+                    ->values([
+                        'PNG'                 => ELabelType::PNG,
+                        ELabelType::PDF       => ELabelType::PDF,
+                        ELabelType::PDF_A6    => ELabelType::PDF_A6,
+                        ELabelType::EPL       => ELabelType::EPL,
+                        ELabelType::ZPL       => ELabelType::ZPL,
+                        ELabelType::ZPL_A6    => ELabelType::ZPL_A6,
+                        ELabelType::ZPL300    => ELabelType::ZPL300,
+                        ELabelType::ZPL300_A6 => ELabelType::ZPL300_A6,
+                    ])
                     ->isRequired()
                 ->end()
             ->end();

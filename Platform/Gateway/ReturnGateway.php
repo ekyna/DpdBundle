@@ -107,7 +107,8 @@ class ReturnGateway extends AbstractGateway
             ->add('delivery_remark', Type\TextType::class, [
                 'label'    => t('delivery_remark', [], 'Dpd'),
                 'required' => false,
-            ]);
+            ])// TODO contact type (sms/email)
+        ;
     }
 
     protected function doSingleShipment(Shipment\ShipmentInterface $shipment): bool
@@ -122,20 +123,20 @@ class ReturnGateway extends AbstractGateway
         $request = $this->createCollectionRequest($shipment);
 
         try {
-            $response = $this->getEPrintApi()->CreateCollectionRequest($request);
+            $response = $this->getEPrintApi()->CreateCollectionRequestBc($request);
         } catch (Dpd\Exception\ExceptionInterface $e) {
             throw new ShipmentGatewayException($e->getMessage(), $e->getCode(), $e);
         }
 
-        $shipments = $response->CreateCollectionRequestResult;
+        $shipments = $response->CreateCollectionRequestBcResult;
 
         // Tracking number
         $current = $shipments->getIterator()->current();
-        /** @var Dpd\EPrint\Model\Shipment|false $current */
+        /** @var Dpd\EPrint\Model\ShipmentBc|false $current */
         if (false === $current) {
             return false;
         }
-        $shipment->setTrackingNumber((string)$current->parcelnumber);
+        $shipment->setTrackingNumber($current->Shipment->BarcodeId);
 
         return true;
     }
@@ -172,11 +173,13 @@ class ReturnGateway extends AbstractGateway
 
         // Services
         $request->services = new Dpd\EPrint\Model\CollectionRequestServices();
-
         $request->services->contact = new Dpd\EPrint\Model\ContactCollectionRequest();
+        $request->services->contact->type = Dpd\EPrint\Enum\ETypeContact::AUTOMATIC_MAIL;
+        $request->services->contact->email = $this->settingManager->getParameter('general.admin_email');
         $request->services->contact->shipper_email = $sale->getEmail();
-        $request->services->contact->shipper_mobil = $this->formatPhoneNumber($mobile);
-        $request->services->contact->type = Dpd\EPrint\Enum\ETypeContact::NO;
+        if (!empty($mobile)) {
+            $request->services->contact->shipper_mobil = $this->formatPhoneNumber($mobile);
+        }
 
         $data = array_replace([
             'insurance'       => 0,
@@ -187,9 +190,10 @@ class ReturnGateway extends AbstractGateway
             'remark'          => '',
             'pick_remark'     => '',
             'delivery_remark' => '',
-        ], array_filter($shipment->getGatewayData(), function ($value) {
-            return !empty($value);
-        }));
+        ],
+            array_filter($shipment->getGatewayData(), function ($value) {
+                return !empty($value);
+            }));
 
         if ($data['insurance']) {
             $request->services->extraInsurance = $this->createExtraInsurance($shipment);
@@ -218,12 +222,12 @@ class ReturnGateway extends AbstractGateway
     protected function doCancelShipment(Shipment\ShipmentInterface $shipment): bool
     {
         // Shipment request
-        $request = new Dpd\EPrint\Request\TerminateCollectionRequestRequest();
+        $request = new Dpd\EPrint\Request\TerminateCollectionRequestBcRequest();
         $request->parcel = $this->createParcel($shipment);
         $request->customer = $this->createCustomer();
 
         try {
-            $this->getEPrintApi()->TerminateCollectionRequest($request);
+            $this->getEPrintApi()->TerminateCollectionRequestBc($request);
         } catch (Dpd\Exception\ExceptionInterface $e) {
             throw new ShipmentGatewayException($e->getMessage(), $e->getCode(), $e);
         }

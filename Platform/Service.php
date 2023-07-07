@@ -68,18 +68,13 @@ final class Service
     {
         self::isValid($code);
 
-        switch ($code) {
-            case self::RELAY:
-                return 'DPD Relais';
-            case self::PREDICT:
-                return 'DPD Predict';
-            case self::RETURN:
-                return 'DPD Retour';
-            case self::RELAY_RETURN:
-                return 'DPD Retour par relais';
-            default:
-                return 'DPD Classic';
-        }
+        return match ($code) {
+            self::RELAY        => 'DPD Relais',
+            self::PREDICT      => 'DPD Predict',
+            self::RETURN       => 'DPD Retour',
+            self::RELAY_RETURN => 'DPD Retour par relais',
+            default            => 'DPD Classic',
+        };
     }
 
     /**
