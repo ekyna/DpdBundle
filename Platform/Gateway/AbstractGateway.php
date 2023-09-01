@@ -144,6 +144,10 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
             return $number;
         }
 
+        if (12 === strlen($number)) {
+            return $this->config['country_code'] . $number;
+        }
+
         return $this->config['country_code'] . $this->config['center_number'] . $number;
     }
 
