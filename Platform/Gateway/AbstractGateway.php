@@ -529,7 +529,7 @@ abstract class AbstractGateway extends Gateway\AbstractGateway
 
         $addInsurance = isset($data['insurance']) && $data['insurance'];
 
-        $index = 0;
+        $index = 1;
         foreach ($shipment->getParcels() as $parcel) {
             $weight = $parcel->getWeight() ?: new Decimal(0);
             $slave = new Dpd\EPrint\Model\SlaveRequest();
