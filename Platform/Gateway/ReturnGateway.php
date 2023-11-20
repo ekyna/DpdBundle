@@ -50,6 +50,37 @@ class ReturnGateway extends AbstractGateway
         return parent::cancel($shipment) || $result;
     }
 
+    public function initData(Shipment\ShipmentInterface $shipment): void
+    {
+        $this->supportShipment($shipment);
+
+        $data = $shipment->getGatewayData();
+
+        if (!isset($data['parcel_count'])) {
+            $data['parcel_count'] = 1;
+        }
+        if (!isset($data['pick_date'])) {
+            $date = new DateTime();
+            if (14 > (int)$date->format('H')) {
+                $date->modify('+1 day');
+            } else {
+                $date->modify('+2 days');
+            }
+            if (6 <= (int)$date->format('N')) {
+                $date->modify('next monday');
+            }
+            $data['pick_date'] = $date->format('Y-m-d 00:00:00');
+        }
+        if (!isset($data['time_from'])) {
+            $data['time_from'] = '10:00';
+        }
+        if (!isset($data['time_to'])) {
+            $data['time_to'] = '12:00';
+        }
+
+        $shipment->setGatewayData($data);
+    }
+
     public function buildForm(FormInterface $form): void
     {
         parent::buildForm($form);
@@ -97,16 +128,31 @@ class ReturnGateway extends AbstractGateway
                 ],
             ])
             ->add('remark', Type\TextType::class, [
-                'label'    => t('remark', [], 'Dpd'),
-                'required' => false,
+                'label'       => t('remark', [], 'Dpd'),
+                'required'    => false,
+                'constraints' => [
+                    new Assert\Length([
+                        'max' => 35,
+                    ]),
+                ],
             ])
             ->add('pick_remark', Type\TextType::class, [
-                'label'    => t('pick_remark', [], 'Dpd'),
-                'required' => false,
+                'label'       => t('pick_remark', [], 'Dpd'),
+                'required'    => false,
+                'constraints' => [
+                    new Assert\Length([
+                        'max' => 35,
+                    ]),
+                ],
             ])
             ->add('delivery_remark', Type\TextType::class, [
-                'label'    => t('delivery_remark', [], 'Dpd'),
-                'required' => false,
+                'label'       => t('delivery_remark', [], 'Dpd'),
+                'required'    => false,
+                'constraints' => [
+                    new Assert\Length([
+                        'max' => 35,
+                    ]),
+                ],
             ])// TODO contact type (sms/email)
         ;
     }
